@@ -5,21 +5,28 @@
 #include <span>
 #include <vector>
 
-class H264Clip
+class AnnexBClip
 {
 public:
-    static std::optional<H264Clip> load(const char* path);
+    enum class Codec
+    {
+        h264,
+        hevc,
+    };
 
-    H264Clip(H264Clip&&) = default;
-    H264Clip& operator=(H264Clip&&) = default;
-    H264Clip(const H264Clip&) = delete;
-    H264Clip& operator=(const H264Clip&) = delete;
+    static std::optional<AnnexBClip> load(const char* path, Codec codec);
+
+    AnnexBClip(AnnexBClip&&) = default;
+    AnnexBClip& operator=(AnnexBClip&&) = default;
+    AnnexBClip(const AnnexBClip&) = delete;
+    AnnexBClip& operator=(const AnnexBClip&) = delete;
 
     std::span<const std::span<const std::uint8_t>> accessUnits() const { return m_units; }
     std::span<const std::uint8_t> codecConfig() const { return m_config; }
 
 private:
-    explicit H264Clip(std::vector<std::uint8_t> data);
+    AnnexBClip(std::vector<std::uint8_t> data, Codec codec);
+    static std::uint8_t nalType(std::uint8_t header, Codec codec);
 
     std::vector<std::uint8_t> m_data;
     std::vector<std::span<const std::uint8_t>> m_units;

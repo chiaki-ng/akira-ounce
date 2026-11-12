@@ -22,7 +22,8 @@ endforeach()
 
 add_executable(ounce_probe
     source/main.cpp
-    source/h264_clip.cpp
+    source/annexb_clip.cpp
+    source/decode_run.cpp
     source/vulkan_presenter.cpp
     ${AKIRA_ROOT}/source/stream/hardware_decoder.cpp
     ${PROBE_SHADER_HEADERS})
