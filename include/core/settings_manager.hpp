@@ -23,6 +23,7 @@
 
 // Forward declaration
 #include "input/rumble_profile.hpp"
+#include "util/ipv4_address.hpp"
 
 class Host;
 
@@ -147,6 +148,7 @@ private:
     std::string updateChannel = "stable";
     std::string uiTheme = "playstation";
     std::string discoverySubnets;
+    std::vector<akira::net::Ipv4Address> customDnsServers;
     bool autoCheckUpdates = true;
     int64_t lastUpdateCheck = 0;
     std::string updateInstallPath;
@@ -410,6 +412,8 @@ public:
 
     std::string getDiscoverySubnets() const;
     void setDiscoverySubnets(const std::string& subnets);
+    std::vector<akira::net::Ipv4Address> getCustomDnsServers() const;
+    void setCustomDnsServers(std::vector<akira::net::Ipv4Address> servers);
     bool getAutoCheckUpdates() const;
     void setAutoCheckUpdates(bool enabled);
     int64_t getLastUpdateCheck() const;

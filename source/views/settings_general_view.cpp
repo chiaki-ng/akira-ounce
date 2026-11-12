@@ -13,6 +13,7 @@
 #include "core/discovery_manager.hpp"
 #include "core/discovery_sweep.hpp"
 #include "ui/theme.hpp"
+#include "util/custom_dns.hpp"
 
 using namespace brls::literals;
 
@@ -23,6 +24,7 @@ SettingsGeneralView::SettingsGeneralView() {
 
     initLanguageSelector();
     initThemeSelector();
+    initCustomDnsCell();
     rebuildSubnetsUI();
     initConnectionShowStagesToggle();
     initHolepunchRetryToggle();
@@ -273,6 +275,42 @@ void SettingsGeneralView::rebuildSubnetsUI() {
     addLabel->setTextColor(akira::ui::active().accent);
     addRow->addView(addLabel);
     subnetsBox->addView(addRow);
+}
+
+void SettingsGeneralView::initCustomDnsCell() {
+    customDnsCell->setText("akira/settings/custom_dns"_i18n);
+    refreshCustomDnsCell();
+    customDnsCell->registerClickAction([this](brls::View*) {
+        promptCustomDns();
+        return true;
+    });
+}
+
+void SettingsGeneralView::refreshCustomDnsCell() {
+    const auto servers = settings->getCustomDnsServers();
+    customDnsCell->setDetailText(servers.empty() ? "akira/settings/custom_dns_system"_i18n
+                                                 : akira::net::CustomDns::formatServers(servers));
+}
+
+void SettingsGeneralView::promptCustomDns() {
+    brls::Application::getImeManager()->openForText(
+        [this](std::string text) {
+            auto servers = akira::net::CustomDns::parseServers(text);
+            if (!servers) {
+                brls::sync([]() {
+                    auto* dialog = new brls::Dialog("akira/settings/custom_dns_invalid"_i18n);
+                    dialog->addButton("akira/common/ok"_i18n, [dialog]() { dialog->close(); });
+                    dialog->open();
+                });
+                return;
+            }
+            settings->setCustomDnsServers(std::move(*servers));
+            settings->writeFile();
+            refreshCustomDnsCell();
+        },
+        "akira/settings/custom_dns_prompt"_i18n,
+        "akira/settings/custom_dns_placeholder"_i18n,
+        31, akira::net::CustomDns::formatServers(settings->getCustomDnsServers()), 0);
 }
 
 void SettingsGeneralView::promptAddSubnet() {

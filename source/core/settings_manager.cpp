@@ -5,6 +5,7 @@
 #include "core/core_log.hpp"
 #include "input/remap_target.hpp"
 #include "util/base64.hpp"
+#include "util/custom_dns.hpp"
 #include "util/http.hpp"
 
 #include <borealis.hpp>
@@ -648,6 +649,12 @@ void SettingsManager::parseTomlFile() {
             portGuessingSocks = static_cast<int>(*val);
         if (auto val = config["network"]["discovery_subnets"].value<std::string>())
             discoverySubnets = *val;
+        if (auto val = config["network"]["custom_dns"].value<std::string>()) {
+            if (auto servers = akira::net::CustomDns::parseServers(*val))
+                setCustomDnsServers(std::move(*servers));
+            else
+                brls::Logger::warning("Ignoring invalid network.custom_dns \"{}\"", *val);
+        }
         if (auto val = config["network"]["companion_port"].value<int64_t>())
             companionPort = static_cast<int>(*val);
 
@@ -1104,6 +1111,7 @@ toml::table SettingsManager::ownedSettings() {
         network.insert("port_guessing_count", portGuessingCount);
         network.insert("port_guessing_socks", portGuessingSocks);
         if (!discoverySubnets.empty()) network.insert("discovery_subnets", discoverySubnets);
+        if (!customDnsServers.empty()) network.insert("custom_dns", akira::net::CustomDns::formatServers(customDnsServers));
         network.insert("companion_port", companionPort);
         config.insert("network", std::move(network));
     }
@@ -2164,6 +2172,15 @@ std::string SettingsManager::getDiscoverySubnets() const {
 
 void SettingsManager::setDiscoverySubnets(const std::string& subnets) {
     discoverySubnets = subnets;
+}
+
+std::vector<akira::net::Ipv4Address> SettingsManager::getCustomDnsServers() const {
+    return customDnsServers;
+}
+
+void SettingsManager::setCustomDnsServers(std::vector<akira::net::Ipv4Address> servers) {
+    customDnsServers = std::move(servers);
+    akira::net::CustomDns::instance().configure(customDnsServers);
 }
 
 bool SettingsManager::getAutoCheckUpdates() const {

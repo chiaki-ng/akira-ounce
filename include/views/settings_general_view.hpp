@@ -3,6 +3,7 @@
 
 #include <borealis.hpp>
 #include <borealis/views/cells/cell_bool.hpp>
+#include <borealis/views/cells/cell_detail.hpp>
 #include <borealis/views/cells/cell_input.hpp>
 #include <borealis/views/cells/cell_selector.hpp>
 #include <borealis/views/cells/cell_slider.hpp>
@@ -18,6 +19,7 @@ private:
     BRLS_BIND(brls::SelectorCell, languageSelector, "settings/language");
     BRLS_BIND(brls::SelectorCell, themeSelector, "settings/theme");
     BRLS_BIND(brls::Box, subnetsBox, "settings/subnetsBox");
+    BRLS_BIND(brls::DetailCell, customDnsCell, "settings/customDns");
     BRLS_BIND(brls::Label, versionLabel, "settings/version");
     BRLS_BIND(brls::BooleanCell, holepunchRetryToggle, "settings/holepunchRetry");
     BRLS_BIND(brls::BooleanCell, connectionShowStagesToggle, "settings/connectionShowStages");
@@ -31,6 +33,9 @@ private:
     void initLanguageSelector();
     void initThemeSelector();
     void rebuildSubnetsUI();
+    void initCustomDnsCell();
+    void refreshCustomDnsCell();
+    void promptCustomDns();
     void promptAddSubnet();
     void removeSubnet(const std::string& value);
     void initVersionUnlock();
