@@ -1,4 +1,4 @@
-ARG BASE=devkita64-ounce:20261112c
+ARG BASE=devkita64-ounce:20261113
 FROM ${BASE}
 
 RUN apt-get update && apt-get install -y --no-install-recommends ninja-build jq && \
