@@ -1,9 +1,9 @@
-#version 460
+#version 450
 
-layout (location = 0) in vec2 vTexCoord;
-layout (location = 0) out vec4 outColor;
+layout(location = 0) in vec2 vTexCoord;
+layout(location = 0) out vec4 outColor;
 
-layout (binding = 0, std140) uniform BorderParams
+layout(push_constant) uniform BorderParams
 {
     vec4 color;
     vec4 geom;

@@ -489,7 +489,7 @@ StreamStats Session::getStreamStats()
         stats.present_ms = m_present_ms.load(std::memory_order_relaxed);
     }
 
-    stats.renderer_name = "Deko3d";
+    stats.renderer_name = "Vulkan";
 
     if (const auto play = attached())
     {

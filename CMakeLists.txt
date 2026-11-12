@@ -59,6 +59,7 @@ add_subdirectory(library/tomlplusplus EXCLUDE_FROM_ALL)
 ###########################################
 program_target(${PROJECT_NAME} "${MAIN_SRC}")
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
+include(vulkan_shaders)
 
 # Borealis uses DEBUG only to attach nxlinkStdio() in its Switch wrapper.
 # Keep that capture path in optimized builds without compiling the whole app
