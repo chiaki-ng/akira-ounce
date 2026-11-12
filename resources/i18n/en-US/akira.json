@@ -611,9 +611,9 @@
     "this_network": "This network",
     "discovery_subnets_prompt": "Enter a /24 to /32 subnet, e.g. 192.168.50.0/24",
     "subnet_invalid": "Enter a /24 to /32 subnet, e.g. 192.168.50.0/24. For a bigger range, use the /24 the console is on.",
-    "custom_dns": "Custom DNS",
+    "custom_dns": "Custom DNS for PlayStation",
     "custom_dns_system": "System",
-    "custom_dns_prompt": "Up to two DNS servers, e.g. 1.1.1.1, 8.8.8.8. Leave empty to use the system DNS.",
+    "custom_dns_prompt": "Up to two DNS servers for PlayStation and Sony names only, e.g. 1.1.1.1, 8.8.8.8. Everything else keeps the system DNS (such as 90DNS). Leave empty to use the system DNS.",
     "custom_dns_placeholder": "1.1.1.1, 8.8.8.8",
     "custom_dns_invalid": "Enter one or two IPv4 DNS servers separated by a comma, e.g. 1.1.1.1, 8.8.8.8.",
     "language": "Language",
@@ -893,7 +893,7 @@
     "install_failed": "Update install failed"
   },
   "network": {
-    "dns_failed": "Failed to lookup {} using DNS server {}. Remote and Cloud Features may not work. Please check your DNS settings.",
+    "dns_failed": "Failed to lookup {} using DNS server {}. Remote and Cloud Features may not work. If your Switch uses 90DNS or another DNS that blocks Sony, set Settings > General > Custom DNS for PlayStation.",
     "dns_ok_in": "OK in {}s",
     "check_nat": "Check NAT Type",
     "testing": "Testing...",

@@ -3,6 +3,7 @@
 #include <borealis.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <charconv>
 #include <ranges>
 
@@ -52,7 +53,8 @@ void CustomDns::configure(std::vector<Ipv4Address> servers)
         return;
     m_servers = std::move(servers);
     m_cache.clear();
-    brls::Logger::info("[NET] custom DNS {}", m_servers.empty() ? std::string("off, using the system resolver") : formatServers(m_servers));
+    brls::Logger::info("[NET] custom DNS for PlayStation names {}",
+        m_servers.empty() ? std::string("off, using the system resolver") : formatServers(m_servers));
 }
 
 std::vector<Ipv4Address> CustomDns::servers() const
@@ -61,23 +63,15 @@ std::vector<Ipv4Address> CustomDns::servers() const
     return m_servers;
 }
 
-bool CustomDns::bypasses(const char* node, const addrinfo* hints)
-{
-    if (!node || !*node)
-        return true;
-    if (hints && ((hints->ai_flags & AI_NUMERICHOST) || hints->ai_family == AF_INET6))
-        return true;
-    const std::string_view host(node);
-    if (host.find(':') != std::string_view::npos || Ipv4Address::parse(host))
-        return true;
-    return host == "localhost" || host.ends_with(".localhost");
-}
-
 std::optional<std::uint16_t> CustomDns::parsePort(const char* service)
 {
     if (!service || !*service)
         return std::uint16_t{0};
     const std::string_view text(service);
+    if (text == "http")
+        return std::uint16_t{80};
+    if (text == "https")
+        return std::uint16_t{443};
     std::uint16_t port = 0;
     const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), port);
     if (error != std::errc{} || end != text.data() + text.size())
@@ -176,14 +170,17 @@ addrinfo* CustomDns::adopt(std::unique_ptr<OwnedList> list)
 
 std::optional<int> CustomDns::getaddrinfo(const char* node, const char* service, const addrinfo* hints, addrinfo** result)
 {
-    if (!result || bypasses(node, hints) || servers().empty())
+    if (!result || !node || !*node || servers().empty())
         return std::nullopt;
-    const auto port = parsePort(service);
-    if (!port)
-        return std::nullopt;
-
     std::string name(node);
     std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (!isSonyHost(name))
+        return std::nullopt;
+    if (hints && hints->ai_family != AF_UNSPEC && hints->ai_family != AF_INET)
+        return EAI_FAMILY;
+    const auto port = parsePort(service);
+    if (!port)
+        return EAI_SERVICE;
     auto addresses = resolve(name);
     if (!addresses)
         return addresses.error();

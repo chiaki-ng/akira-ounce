@@ -4,6 +4,8 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <expected>
@@ -24,6 +26,17 @@ namespace akira::net {
 class CustomDns {
 public:
     static constexpr std::size_t MaxServers = 2;
+    static constexpr std::array<std::string_view, 4> SonyDomains{
+        "playstation.com", "playstation.net", "sonyentertainmentnetwork.com", "sony.com"};
+
+    static bool isSonyHost(std::string_view host)
+    {
+        if (host.ends_with('.'))
+            host.remove_suffix(1);
+        return std::ranges::any_of(SonyDomains, [host](std::string_view domain) {
+            return host.ends_with(domain) && (host.size() == domain.size() || host[host.size() - domain.size() - 1] == '.');
+        });
+    }
 
     static CustomDns& instance();
     static std::optional<std::vector<Ipv4Address>> parseServers(std::string_view text);
@@ -58,7 +71,6 @@ private:
     std::expected<std::vector<Ipv4Address>, int> resolve(const std::string& name);
     std::optional<std::vector<Ipv4Address>> cached(const std::string& name);
     addrinfo* adopt(std::unique_ptr<OwnedList> list);
-    static bool bypasses(const char* node, const addrinfo* hints);
     static std::optional<std::uint16_t> parsePort(const char* service);
     static std::unique_ptr<OwnedList> buildList(std::span<const Ipv4Address> addresses, std::uint16_t port, const addrinfo* hints,
         std::string_view name);
