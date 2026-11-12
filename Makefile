@@ -13,9 +13,11 @@
 
 .PHONY: help build deploy crash test rebuild shell clean docker-image image-tag submodules backup
 
-IMAGE_HASH   := $(shell { cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)); \
-                          git -C "$(CURDIR)/library/uam" rev-parse HEAD; \
-                          git -C "$(CURDIR)/library/uam" diff HEAD; } 2>/dev/null | shasum -a 256 | cut -c1-12)
+OUNCE_DEPS   ?= $(abspath $(CURDIR)/../native-deps-ounce/out/aarch64/pool)
+WITH_BOREALIS ?= $(abspath $(CURDIR)/../borealis-ounce)
+IMAGE_HASH   := $(shell { cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)) \
+                          $(sort $(wildcard $(OUNCE_DEPS)/*/BUILD-INFO)); } 2>/dev/null | shasum -a 256 | cut -c1-12)
+DOCKER_BUILD  = docker build --build-context ounce-deps="$(OUNCE_DEPS)"
 DOCKER_IMAGE ?= akira-builder:$(IMAGE_HASH)
 NRO_FILE     := $(CURDIR)/build/akira.nro
 ELF_FILE     := build/akira.elf
@@ -27,7 +29,7 @@ BUILD_CHANNEL      ?= dev
 VERSION_PRERELEASE ?=
 DOCKER_TTY   := $(shell [ -t 0 ] && echo -it || echo -i)
 
-OVERRIDES := CORE BOREALIS WIREGUARD LWIP UAM NX_DEPS CURL FFMPEG NGHTTP2 SIMDUTF
+OVERRIDES := CORE BOREALIS WIREGUARD LWIP
 override_path = $(realpath $(patsubst ~/%,$(HOME)/%,$(WITH_$(1))))
 override_git = $(filter-out $(1)/%,$(shell test -f "$(1)/.git" && git -C "$(1)" rev-parse --path-format=absolute --git-common-dir 2>/dev/null))
 $(foreach lib,$(OVERRIDES),$(if $(WITH_$(lib)),$(if $(call override_path,$(lib)),,$(error WITH_$(lib)=$(WITH_$(lib)) does not exist))))
@@ -165,7 +167,8 @@ docker-image: submodules
 	@IMAGE_EXISTS=$$(docker image inspect $(DOCKER_IMAGE) > /dev/null 2>&1 && echo yes || echo no); \
 	if [ "$$IMAGE_EXISTS" = "no" ]; then \
 		printf "$(GREEN)[*]$(NC) Building Docker image...\n"; \
-		docker build -t $(DOCKER_IMAGE) "$(CURDIR)"; \
+		test -d "$(OUNCE_DEPS)" || { printf "$(RED)[x]$(NC) No ounce deps at $(OUNCE_DEPS): run make build PLATFORM=ounce in native-deps-ounce\n"; exit 1; }; \
+		$(DOCKER_BUILD) -t $(DOCKER_IMAGE) "$(CURDIR)"; \
 	fi
 
 image-tag:
@@ -228,7 +231,7 @@ deploy: build
 
 rebuild: clean submodules
 	@printf "$(GREEN)[*]$(NC) Rebuilding Docker image...\n"
-	@docker build --no-cache -t $(DOCKER_IMAGE) "$(CURDIR)"
+	@$(DOCKER_BUILD) --no-cache -t $(DOCKER_IMAGE) "$(CURDIR)"
 	@$(MAKE) build
 
 shell: docker-image

@@ -1,42 +1,26 @@
 #!/bin/bash
 set -eo pipefail
-source /opt/devkitpro/switchvars.sh
+source /opt/devkitpro/switch2vars.sh
 
 SOURCE_DIR="${AKIRA_SOURCE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 BUILD_DIR="${SOURCE_DIR}/build"
-DOCKER_SCRIPTS="${SOURCE_DIR}/scripts/docker"
 ENVIRONMENT_FILE="${BUILD_DIR}/.akira-environment"
 
 git config --global --add safe.directory '*'
-
-if [ -n "${WITH_NX_DEPS}" ]; then
-    bash "${DOCKER_SCRIPTS}/install-nx-deps.sh" pool "${WITH_NX_DEPS}"
-fi
-
-for library in curl ffmpeg nghttp2 simdutf; do
-    variable="WITH_${library^^}"
-    if [ -n "${!variable}" ]; then
-        bash "${DOCKER_SCRIPTS}/install-nx-deps.sh" "${library}" "${!variable}"
-    fi
-done
-
-if [ -n "${WITH_UAM}" ]; then
-    bash "${DOCKER_SCRIPTS}/build-uam.sh" "${WITH_UAM}"
-fi
 
 CORE_DIR="${WITH_CORE:-${SOURCE_DIR}/library/libchiaki-core}"
 BOREALIS_DIR="${WITH_BOREALIS:-${SOURCE_DIR}/library/borealis}"
 WIREGUARD_DIR="${WITH_WIREGUARD:-${SOURCE_DIR}/library/switch-wireguard}"
 LWIP_DIR="${WITH_LWIP:-${SOURCE_DIR}/library/lwip}"
 
-for override in CORE BOREALIS WIREGUARD LWIP UAM NX_DEPS CURL FFMPEG NGHTTP2 SIMDUTF; do
+for override in CORE BOREALIS WIREGUARD LWIP; do
     variable="WITH_${override}"
     if [ -n "${!variable}" ]; then
         echo "=== Override ${override}: ${!variable} ==="
     fi
 done
 
-ENVIRONMENT="image=${AKIRA_IMAGE} source=${SOURCE_DIR} nx_deps=${WITH_NX_DEPS} curl=${WITH_CURL} ffmpeg=${WITH_FFMPEG} nghttp2=${WITH_NGHTTP2} simdutf=${WITH_SIMDUTF} uam=${WITH_UAM}"
+ENVIRONMENT="image=${AKIRA_IMAGE} source=${SOURCE_DIR} borealis=${BOREALIS_DIR}"
 if [ "$(cat "${ENVIRONMENT_FILE}" 2>/dev/null)" != "${ENVIRONMENT}" ]; then
     echo "=== Build environment changed, starting a clean build ==="
     rm -rf "${BUILD_DIR}"

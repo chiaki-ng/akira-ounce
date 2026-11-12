@@ -11,10 +11,9 @@ target_include_directories(wireguard PRIVATE
     ${WIREGUARD_DIR}/library/crypto
     ${WIREGUARD_DIR}/src
 )
+separate_arguments(WIREGUARD_ARCH_FLAGS UNIX_COMMAND "${NX_ARCH_SETTINGS}")
 target_compile_options(wireguard PRIVATE
-    -march=armv8-a+crc+crypto
-    -mtune=cortex-a57
-    -mtp=soft
+    ${WIREGUARD_ARCH_FLAGS}
     -fPIC
     -O2
     -Wall

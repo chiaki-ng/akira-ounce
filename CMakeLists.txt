@@ -2,15 +2,13 @@ cmake_minimum_required(VERSION 3.13)
 
 # Force Switch platform
 set(PLATFORM_SWITCH ON CACHE BOOL "Build for Nintendo Switch" FORCE)
+set(PLATFORM_SWITCH2 ON CACHE BOOL "Build for Switch 2 with libounce" FORCE)
 
 # Borealis paths
 set(BOREALIS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/library/borealis CACHE PATH "Borealis source tree")
 set(BOREALIS_LIBRARY ${BOREALIS_DIR}/library)
 
-# Use deko3d for video rendering (must be set BEFORE commonOption.cmake)
-set(USE_DEKO3D ON CACHE BOOL "Use deko3d for video rendering" FORCE)
-
-option(DEBUG_DEKO3D_RENDERING "Enable debug squares in video shader" OFF)
+set(USE_VULKAN ON CACHE BOOL "Use Vulkan for rendering" FORCE)
 
 # Platform common options + toolchain from borealis
 include(${BOREALIS_LIBRARY}/cmake/commonOption.cmake)
@@ -99,10 +97,6 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     ${APP_PLATFORM_OPTION}
 )
 
-if (USE_DEKO3D)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE BOREALIS_USE_DEKO3D)
-endif()
-
 option(MUTE_CHIAKI_LOGS "Drop every core log line" OFF)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_MUTE_CORE_LOGS=$<BOOL:${MUTE_CHIAKI_LOGS}>)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_PS5_CLOUD_LAUNCH=$<BOOL:${AKIRA_PS5_CLOUD_LAUNCH}>)
@@ -117,21 +111,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     libchiaking_simdutf
     CURL::libcurl
     tomlplusplus::tomlplusplus
-    ${SDL2_LIB}
+    PkgConfig::SDL2
     PkgConfig::FFMPEG
-    ${DAV1D_LIB}
-    ${JSONC_LIB}
+    PkgConfig::JSONC
     wireguard
     ${APP_PLATFORM_LIB}
 )
-
-# deko3d shader compilation + uam runtime link
-include(deko3d_shaders)
-
-# SDL2 depends on EGL/OpenGL libraries on Switch
-if (PLATFORM_SWITCH)
-    target_link_libraries(${PROJECT_NAME} PRIVATE EGL glapi drm_nouveau)
-endif()
 
 target_link_options(${PROJECT_NAME} PRIVATE ${APP_PLATFORM_LINK_OPTION})
 if (PLATFORM_SWITCH)

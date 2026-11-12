@@ -9,9 +9,8 @@ echo "=== Generating build info ==="
 
 CORE_COMMIT=$(git -C "${CORE_SOURCE_DIR}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
 CORE_VERSION=$(tr -d '[:space:]' < "${CORE_SOURCE_DIR}/VERSION.txt" 2>/dev/null || echo "unknown")
-CURL_VERSION=$(jq -r '.version' ${NX_DEPS}/curl/BUILD-INFO 2>/dev/null || echo "unknown")
-FFMPEG_VERSION=$(jq -r '.version' ${NX_DEPS}/ffmpeg/BUILD-INFO 2>/dev/null || echo "unknown")
-NGHTTP2_VERSION=$(jq -r '.version' ${NX_DEPS}/nghttp2/BUILD-INFO 2>/dev/null || echo "unknown")
+OUNCE_DEPS="${DEVKITPRO:-/opt/devkitpro}/portlibs/switch2/share/ounce-deps"
+OUNCE_SDK_VERSION=$(sed -n 's/^ounce-sdk //p' "${DEVKITPRO:-/opt/devkitpro}/ounce-sdk-version.txt" 2>/dev/null || echo "unknown")
 
 # Extract Akira version from cmake/version.cmake (channel/prerelease/commit composed below)
 AKIRA_MAJOR=$(grep 'set(VERSION_MAJOR' ${BUILD_DIR}/cmake/version.cmake | sed 's/[^0-9]*//g')
@@ -39,9 +38,11 @@ echo "Build: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> ${BUILD_DIR}/resources/buil
 echo "" >> ${BUILD_DIR}/resources/build_info.txt
 echo "=== Custom Libraries ===" >> ${BUILD_DIR}/resources/build_info.txt
 echo "libchiaking ${CORE_VERSION} (${CORE_COMMIT})" >> ${BUILD_DIR}/resources/build_info.txt
-echo "curl ${CURL_VERSION} (libnx TLS)" >> ${BUILD_DIR}/resources/build_info.txt
-echo "nghttp2 ${NGHTTP2_VERSION}" >> ${BUILD_DIR}/resources/build_info.txt
-echo "ffmpeg ${FFMPEG_VERSION}" >> ${BUILD_DIR}/resources/build_info.txt
+echo "ounce-sdk ${OUNCE_SDK_VERSION}" >> ${BUILD_DIR}/resources/build_info.txt
+for info in "${OUNCE_DEPS}"/*/BUILD-INFO; do
+    [ -f "${info}" ] || continue
+    echo "$(basename "$(dirname "${info}")") $(jq -r '.version' "${info}" 2>/dev/null || echo unknown)" >> ${BUILD_DIR}/resources/build_info.txt
+done
 echo "" >> ${BUILD_DIR}/resources/build_info.txt
 echo "=== DevkitPro Packages ===" >> ${BUILD_DIR}/resources/build_info.txt
 dkp-pacman -Q >> ${BUILD_DIR}/resources/build_info.txt
