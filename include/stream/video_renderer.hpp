@@ -8,10 +8,7 @@
 #include <cstdint>
 #include "stream/stream_stats.hpp"
 
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-}
+#include "stream/hardware_decoder.hpp"
 
 // Abstract interface for video rendering
 // Implementations: OpenGLRenderer, Deko3dRenderer
@@ -24,9 +21,11 @@ public:
 
     virtual bool isInitialized() const = 0;
 
-    virtual void draw(AVFrame* frame) = 0;
+    using Frame = akira::stream::HardwareDecoder::Frame;
 
-    virtual void presentFrame(AVFrame* frame) { draw(frame); }
+    virtual void draw(Frame frame) = 0;
+
+    virtual void presentFrame(Frame frame) { draw(std::move(frame)); }
 
     virtual void cleanup() = 0;
 

@@ -17,15 +17,15 @@
 #include "core/exception.hpp"
 #include "input/rumble_profile.hpp"
 #include "stream/stream_stats.hpp"
+#include "stream/hardware_decoder.hpp"
 #include "stream/video_worker.hpp"
 
 class AudioManager;
 class HapticManager;
 class InputManager;
-class VideoDecoder;
+class StreamDecoder;
 class IVideoRenderer;
 class IpcStatsService;
-typedef struct AVFrame AVFrame;
 
 class Session
 {
@@ -38,7 +38,7 @@ private:
     std::unique_ptr<AudioManager> m_audio_manager;
     std::unique_ptr<HapticManager> m_haptic_manager;
     std::unique_ptr<InputManager> m_input_manager;
-    std::unique_ptr<VideoDecoder> m_video_decoder;
+    std::unique_ptr<StreamDecoder> m_video_decoder;
     std::unique_ptr<IVideoRenderer> m_video_renderer;
     std::unique_ptr<akira::stream::VideoWorker> m_video_worker;
     std::unique_ptr<IpcStatsService> m_ipc_service;
@@ -72,7 +72,7 @@ private:
     std::weak_ptr<libchiaking::play::Session> m_play;
     std::chrono::steady_clock::time_point m_stream_start_time;
 
-    void presentDecodedFrame(AVFrame* frame);
+    void presentDecodedFrame(akira::stream::HardwareDecoder::Frame frame);
     bool configureAudio(const libchiaking::media::AudioFormat& format, bool raw_pcm);
     std::shared_ptr<libchiaking::play::Session> attached() const;
 

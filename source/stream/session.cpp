@@ -5,8 +5,8 @@
 #include "stream/audio_manager.hpp"
 #include "stream/haptic_manager.hpp"
 #include "stream/input_manager.hpp"
-#include "stream/video_decoder.hpp"
-#include "stream/deko3d_renderer.hpp"
+#include "stream/stream_decoder.hpp"
+#include "stream/vulkan_renderer.hpp"
 #include "stream/ipc_service.hpp"
 
 #include <cstring>
@@ -76,7 +76,7 @@ Session::Session()
     m_haptic_manager->setInputManager(m_input_manager.get());
 
     m_haptic_manager->setExtendedInput(&m_input_manager->extendedInput());
-    m_video_decoder = std::make_unique<VideoDecoder>();
+    m_video_decoder = std::make_unique<StreamDecoder>();
 }
 
 Session::~Session()
@@ -218,8 +218,8 @@ bool Session::InitVideo(int video_width, int video_height)
         return false;
     }
 
-    brls::Logger::info("Creating Deko3d renderer");
-    m_video_renderer = std::make_unique<Deko3dRenderer>();
+    brls::Logger::info("Creating Vulkan renderer");
+    m_video_renderer = std::make_unique<VulkanRenderer>();
 
     if (!m_video_renderer->initialize(video_width, video_height))
     {
@@ -228,9 +228,8 @@ bool Session::InitVideo(int video_width, int video_height)
         return false;
     }
 
-    m_video_decoder->setFrameReadyCallback([this](AVFrame* frame) {
-        presentDecodedFrame(frame);
-        av_frame_free(&frame);
+    m_video_decoder->setFrameReadyCallback([this](StreamDecoder::Frame frame) {
+        presentDecodedFrame(std::move(frame));
     });
 
     m_needs_recover = false;
@@ -360,7 +359,7 @@ bool Session::InitAVCodec(bool hevc, int video_width, int video_height)
     std::lock_guard lock(m_media_mutex);
     if (!m_video_decoder)
     {
-        m_video_decoder = std::make_unique<VideoDecoder>();
+        m_video_decoder = std::make_unique<StreamDecoder>();
     }
 
     return m_video_decoder->initCodec(hevc, video_width, video_height);
@@ -409,16 +408,16 @@ bool Session::MainLoop()
     return !this->quit;
 }
 
-void Session::presentDecodedFrame(AVFrame* frame)
+void Session::presentDecodedFrame(akira::stream::HardwareDecoder::Frame frame)
 {
-    if (!frame || !frame->data[0] || !m_video_renderer)
+    if (!frame || !m_video_renderer)
         return;
 
     if (!m_first_frame_received)
     {
         m_first_frame_received = true;
         brls::Application::setRenderSuspended(true);
-        updateActualResolution(frame->width, frame->height);
+        updateActualResolution(static_cast<int>(frame->width()), static_cast<int>(frame->height()));
         SettingsManager::getInstance()->setStreamingActive(true);
         brls::Logger::info("First video frame received!");
 
@@ -450,7 +449,7 @@ void Session::presentDecodedFrame(AVFrame* frame)
         }
     }
 
-    m_video_renderer->presentFrame(frame);
+    m_video_renderer->presentFrame(std::move(frame));
     m_presented.store(true, std::memory_order_relaxed);
 }
 
