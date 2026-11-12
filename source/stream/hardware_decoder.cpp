@@ -55,7 +55,7 @@ std::expected<std::shared_ptr<HardwareDecoder>, Result> HardwareDecoder::create(
 {
     std::shared_ptr<HardwareDecoder> decoder(new HardwareDecoder(config.width, config.height));
     const VideoDecoderConfig native{
-        .codec = ViddecCodec_H264,
+        .codec = config.codec,
         .width = config.width,
         .height = config.height,
         .image_count = ImageCount,

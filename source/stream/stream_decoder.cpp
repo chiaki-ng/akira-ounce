@@ -183,7 +183,7 @@ bool StreamDecoder::ensureHardwareDecoder(const Keyframe& keyframe)
     const auto height = static_cast<std::uint32_t>((std::max(m_video_height, 16) + 15) & ~15);
     m_hardware.reset();
     const auto config = codecConfig();
-    auto created = akira::stream::HardwareDecoder::create({width, height, config});
+    auto created = akira::stream::HardwareDecoder::create({ViddecCodec_H264, width, height, config});
     if (!created)
     {
         brls::Logger::error("StreamDecoder: videoDecoderCreate {}x{} failed: 0x{:x}", width, height, created.error());
