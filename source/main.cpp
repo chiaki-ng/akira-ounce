@@ -50,6 +50,8 @@
 #include "core/discovery_manager.hpp"
 #include "ui/akira_header.hpp"
 #include "views/update_flow.hpp"
+#include "util/crash_report.hpp"
+#include "akira_version.h"
 
 #include <borealis/core/i18n.hpp>
 using namespace brls::literals;
@@ -516,9 +518,14 @@ public:
 
 int main(int argc, char* argv[])
 {
+    akira::CrashReport::install("akira", AKIRA_VERSION_STRING, "/switch/akira/crash");
     brls::Logger::setLogLevel(brls::LogLevel::LOG_INFO);
+    akira::CrashReport::stage("settings");
     auto* settings = SettingsManager::getInstance();
     settings->applyChiakiLogVerbosity();
+    if (settings->getEnableFileLogging())
+        akira::AppLog::open(SettingsManager::getLogFilePath());
+    brls::Logger::info("akira {} starting", AKIRA_VERSION_STRING);
 
     akira::UpdateManager::setSelfPath(argc > 0 && argv[0] ? argv[0] : "");
 
@@ -545,6 +552,7 @@ int main(int argc, char* argv[])
 
     initCustomTheme();
 
+    akira::CrashReport::stage("borealis init");
     if (!brls::Application::init())
     {
         brls::Logger::error("Unable to init Borealis application");
@@ -559,12 +567,14 @@ int main(int argc, char* argv[])
             httpMarkConnectionsStale();
     });
 
+    akira::CrashReport::stage("sdl init");
     if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) < 0)
     {
         brls::Logger::error("SDL_Init failed: {}", SDL_GetError());
         return EXIT_FAILURE;
     }
 
+    akira::CrashReport::stage("curl init");
     const CURLcode curlInit = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (curlInit != CURLE_OK)
     {
@@ -573,6 +583,7 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
+    akira::CrashReport::stage("core init");
     std::optional<akira::ChiakiCore> core;
     core.emplace(*settings);
     if (!core->opened())
@@ -581,9 +592,6 @@ int main(int argc, char* argv[])
         if (focused && core)
             core->http().drop_connections("applet regained focus");
     });
-
-    if (SettingsManager::getInstance()->getEnableFileLogging())
-        akira::AppLog::open(SettingsManager::getLogFilePath());
 
     brls::Logger::setAsyncLogging(true);
     if (const curl_version_info_data* curlInfo = curl_version_info(CURLVERSION_NOW))
@@ -630,6 +638,7 @@ int main(int argc, char* argv[])
     brls::Application::registerXMLView("StreamView", StreamView::create);
     brls::Application::registerXMLView("EnterPinView", EnterPinView::create);
 
+    akira::CrashReport::stage("create window");
     brls::Application::createWindow("Akira");
 
     if (!brls::Application::loadFontFromFile("mono", BRLS_ASSET("font/Cousine-Regular.ttf")))
@@ -647,6 +656,7 @@ int main(int argc, char* argv[])
         brls::Application::pushActivity(new AppletWarningActivity());
     }
 
+    akira::CrashReport::stage("main loop");
     try{
         while (brls::Application::mainLoop())
         {

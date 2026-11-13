@@ -26,10 +26,12 @@ add_executable(ounce_probe
     source/decode_run.cpp
     source/vulkan_presenter.cpp
     ${AKIRA_ROOT}/source/stream/hardware_decoder.cpp
+    ${AKIRA_ROOT}/source/util/crash_report.cpp
+    ${AKIRA_ROOT}/source/util/exception_hook.cpp
     ${PROBE_SHADER_HEADERS})
 set_target_properties(ounce_probe PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON)
 target_include_directories(ounce_probe PRIVATE source ${AKIRA_ROOT}/include ${PROBE_SHADER_DIR})
-target_compile_options(ounce_probe PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
+target_compile_options(ounce_probe PRIVATE -Wall -Wextra -Wno-missing-field-initializers -fno-omit-frame-pointer)
 target_compile_definitions(ounce_probe PRIVATE VK_USE_PLATFORM_VI_NN)
 target_link_libraries(ounce_probe PRIVATE vulkan nx)
 

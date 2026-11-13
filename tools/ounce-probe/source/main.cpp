@@ -3,10 +3,13 @@
 #include "annexb_clip.hpp"
 #include "decode_run.hpp"
 #include "probe_log.hpp"
+#include "util/crash_report.hpp"
 #include "vulkan_presenter.hpp"
 
 int main(int, char**)
 {
+    akira::CrashReport::install("ounce-probe", "probe", "/switch/ounce-probe");
+    akira::CrashReport::stage("romfs");
     romfsInit();
     const bool sockets = R_SUCCEEDED(socketInitializeDefault());
     if (sockets)
@@ -23,15 +26,18 @@ int main(int, char**)
     if (!h264 || !hevc)
         log.line("FAIL could not load the romfs clips (h264 {} hevc {})", h264.has_value(), hevc.has_value());
 
+    akira::CrashReport::stage("vulkan setup");
     if (auto presenter = VulkanPresenter::create(log))
     {
         DecodeRun runner(log, *presenter, pad);
         bool stopped = false;
         if (hevc)
         {
+            akira::CrashReport::stage("hevc trial");
             const auto result = runner.run("hevc-codec2", *hevc, static_cast<ViddecCodec>(2), 180);
             stopped = result && result->stopped;
         }
+        akira::CrashReport::stage("h264 loop");
         if (h264 && !stopped)
             runner.run("h264", *h264, ViddecCodec_H264, std::nullopt);
     }

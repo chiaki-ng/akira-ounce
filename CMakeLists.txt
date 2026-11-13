@@ -16,6 +16,8 @@ include(${BOREALIS_LIBRARY}/cmake/toolchain.cmake)
 
 project(akira)
 
+add_compile_options(-fno-omit-frame-pointer)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Project metadata + git-derived version

@@ -8,6 +8,7 @@
 #include "stream/stream_decoder.hpp"
 #include "stream/vulkan_renderer.hpp"
 #include "stream/ipc_service.hpp"
+#include "util/crash_report.hpp"
 
 #include <cstring>
 
@@ -209,6 +210,7 @@ libchiaking::media::AudioResult Session::submitAudio(const libchiaking::media::A
 bool Session::InitVideo(int video_width, int video_height)
 {
     brls::Logger::info("load InitVideo");
+    akira::CrashReport::stage("stream video");
     std::lock_guard lock(m_media_mutex);
     this->quit = false;
 
@@ -246,6 +248,7 @@ bool Session::InitVideo(int video_width, int video_height)
 bool Session::FreeVideo()
 {
     this->quit = true;
+    akira::CrashReport::stage("stream teardown");
 
     m_video_worker.reset();
 
