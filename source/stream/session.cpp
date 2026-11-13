@@ -7,10 +7,7 @@
 #include "stream/input_manager.hpp"
 #include "stream/stream_decoder.hpp"
 #include "stream/vulkan_renderer.hpp"
-#include "stream/ipc_service.hpp"
 #include "util/crash_report.hpp"
-
-#include <cstring>
 
 Session* Session::GetInstance()
 {
@@ -68,6 +65,12 @@ void Session::setRumbleSource(akira::input::RumbleSource source)
         m_haptic_manager->setRumbleSource(source);
 }
 
+void Session::setHapticIntensity(akira::input::HapticIntensity intensity)
+{
+    if (m_haptic_manager)
+        m_haptic_manager->setHapticIntensity(intensity);
+}
+
 Session::Session()
 {
     m_audio_manager = std::make_unique<AudioManager>();
@@ -75,18 +78,12 @@ Session::Session()
     m_input_manager = std::make_unique<InputManager>();
 
     m_haptic_manager->setInputManager(m_input_manager.get());
-
-    m_haptic_manager->setExtendedInput(&m_input_manager->extendedInput());
     m_video_decoder = std::make_unique<StreamDecoder>();
 }
 
 Session::~Session()
 {
     FreeVideo();
-}
-
-void Session::SetMesaConfig()
-{
 }
 
 void Session::describeStream(const libchiaking::media::StreamDescription& description)
@@ -255,9 +252,6 @@ bool Session::FreeVideo()
     if (m_video_decoder)
         m_video_decoder->setFrameReadyCallback(nullptr);
 
-    if (m_ipc_service)
-        m_ipc_service->SetStreamActive(false);
-
     m_first_frame_received = false;
     SettingsManager::getInstance()->setStreamingActive(false);
 
@@ -285,45 +279,10 @@ void Session::SetRumble(uint8_t left, uint8_t right)
     }
 }
 
-void Session::SetTriggerEffects(const libchiaking::controllers::TriggerEffects& effects)
+void Session::SetConsoleVibration(uint8_t vibration)
 {
-    if (!m_input_manager)
-        return;
-
-    if (akira::input::Ds5IntensityFromWire(m_trigger_intensity)
-        == akira::input::Ds5EffectIntensity::Off)
-        return;
-
-    akira::input::PadPath::TriggerEffect left;
-    akira::input::PadPath::TriggerEffect right;
-
-    left.type = effects.left.mode;
-    std::memcpy(left.params, effects.left.parameters.data(), sizeof(left.params));
-    right.type = effects.right.mode;
-    std::memcpy(right.params, effects.right.parameters.data(), sizeof(right.params));
-
-    m_input_manager->sendTriggerEffects(left, right);
-}
-
-void Session::SetEffectIntensity(uint8_t vibration, uint8_t trigger)
-{
-    m_trigger_intensity = trigger;
-
-    if (!m_input_manager)
-        return;
-
-    m_input_manager->sendEffectIntensity(vibration, trigger);
-
     if (m_haptic_manager)
         m_haptic_manager->setConsoleVibration(vibration);
-}
-
-void Session::SetLedColor(uint8_t red, uint8_t green, uint8_t blue)
-{
-    if (!m_input_manager)
-        return;
-
-    m_input_manager->sendLightbar(red, green, blue);
 }
 
 void Session::HapticCB(std::span<const std::byte> pcm)
@@ -388,14 +347,6 @@ void Session::UpdateControllerState(libchiaking::controllers::ControllerInput& i
     }
 }
 
-void Session::UpdateSecondaryPads(std::span<libchiaking::controllers::ControllerInput> states, uint8_t& count)
-{
-    if (m_input_manager)
-    {
-        m_input_manager->readSecondaryPads(states, count);
-    }
-}
-
 bool Session::MainLoop()
 {
     if (m_video_renderer && m_video_renderer->isInitialized() && m_video_decoder)
@@ -423,16 +374,6 @@ void Session::presentDecodedFrame(akira::stream::HardwareDecoder::Frame frame)
         updateActualResolution(static_cast<int>(frame->width()), static_cast<int>(frame->height()));
         SettingsManager::getInstance()->setStreamingActive(true);
         brls::Logger::info("First video frame received!");
-
-        if (SettingsManager::getInstance()->getIpcStatsEnabled())
-        {
-            if (!m_ipc_service)
-            {
-                m_ipc_service = std::make_unique<IpcStatsService>(this);
-                m_ipc_service->Start();
-            }
-            m_ipc_service->SetStreamActive(true);
-        }
     }
 
     if (m_video_decoder)
@@ -466,13 +407,6 @@ StreamStats Session::getStreamStats()
     stats.requested_fps = m_requested_fps;
     stats.requested_bitrate = m_requested_bitrate;
     stats.requested_hevc = m_requested_hevc;
-    
-    if (m_input_manager) {
-        auto& extended = m_input_manager->extendedInput();
-        stats.analog_triggers_active = extended.hasFreshAnalogState();
-        stats.analog_l2 = extended.l2();
-        stats.analog_r2 = extended.r2();
-    }
 
     if (m_video_renderer)
         stats.fps = m_video_renderer->getRenderFPS();

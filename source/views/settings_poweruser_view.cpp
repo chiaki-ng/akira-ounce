@@ -15,7 +15,6 @@ SettingsPowerUserView::SettingsPowerUserView() {
     settings = SettingsManager::getInstance();
 
     initUnlockBitrateMaxToggle();
-    initIpcStatsToggle();
     initPortGuessingToggle();
     initPortGuessingCountSlider();
     initPortGuessingSocksSlider();
@@ -43,18 +42,6 @@ void SettingsPowerUserView::initUnlockBitrateMaxToggle() {
             settings->setUnlockBitrateMax(isOn);
             settings->writeFile();
             brls::Logger::info("Unlock Bitrate Max set to {}", isOn ? "true" : "false");
-        }
-    );
-}
-
-void SettingsPowerUserView::initIpcStatsToggle() {
-    ipcStatsToggle->init(
-        "akira/settings/ipc_stats"_i18n,
-        settings->getIpcStatsEnabled(),
-        [this](bool isOn) {
-            settings->setIpcStatsEnabled(isOn);
-            settings->writeFile();
-            brls::Logger::info("IPC Stats set to {}", isOn ? "true" : "false");
         }
     );
 }

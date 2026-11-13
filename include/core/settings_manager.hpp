@@ -106,8 +106,6 @@ private:
     mutable std::recursive_mutex profileMutex;
     int64_t nextConsoleId = 1;
     HapticPreset globalHaptic = HapticPreset::Disabled;
-    bool  directRumbleInStream  = false;
-    bool  directHapticsInStream = false;
 
 
     float rumbleFreqLow = 140.0f;
@@ -140,19 +138,13 @@ private:
     int portGuessingCount = 75;
     int portGuessingSocks = 120;
     bool powerUserMenuUnlocked = false;
-    bool ipcStatsEnabled = false;
     bool unlockBitrateMax = false;
     bool autoReconnect = true;
     bool devFakeHosts = false;
     bool hideAccountName = false;
-    std::string updateChannel = "stable";
     std::string uiTheme = "playstation";
     std::string discoverySubnets;
     std::vector<akira::net::Ipv4Address> customDnsServers;
-    bool autoCheckUpdates = true;
-    int64_t lastUpdateCheck = 0;
-    std::string updateInstallPath;
-    std::string devUpdateServer;
     GyroSource globalGyroSource = GyroSource::Auto;
     bool sleepOnExit = false;
     bool requestIdrOnFecFailure = true;
@@ -347,26 +339,17 @@ public:
     void setHaptic(Host* host, HapticPreset value);
     void setHaptic(Host* host, const std::string& value);
 
-    bool getDirectRumbleInStream() const;
-    void setDirectRumbleInStream(bool value);
-    bool getDirectHapticsInStream() const;
-    void setDirectHapticsInStream(bool value);
 
 
-    akira::input::RumbleProfile resolveRumbleProfile(uint16_t vendorId, uint16_t productId,
-                                                     const uint8_t* address,
-                                                     bool switchNative, bool joycon) const;
+    akira::input::RumbleProfile resolveRumbleProfile(bool joycon) const;
 
-    std::string resolveRumbleKey(uint16_t vendorId, uint16_t productId,
-                                 const uint8_t* address, bool switchNative,
-                                 bool joycon) const;
+    std::string resolveRumbleKey(bool joycon) const;
 
     akira::input::RumbleProfile getRumbleProfile(const std::string& key) const;
     void setRumbleProfile(const std::string& key, const akira::input::RumbleProfile& profile);
     bool hasRumbleProfile(const std::string& key) const;
 
-    bool seedRumbleProfile(const std::string& key,
-                           const akira::input::RumbleProfile* inheritFrom = nullptr);
+    bool seedRumbleProfile(const std::string& key);
 
     void resetRumbleProfile(const std::string& key);
 
@@ -391,8 +374,6 @@ public:
 
     bool getPowerUserMenuUnlocked() const;
     void setPowerUserMenuUnlocked(bool unlocked);
-    bool getIpcStatsEnabled() const;
-    void setIpcStatsEnabled(bool enabled);
     bool getUnlockBitrateMax() const;
     void setUnlockBitrateMax(bool enabled);
     bool getAutoReconnect() const;
@@ -404,9 +385,6 @@ public:
     void setHideAccountName(bool enabled);
     std::string maskAccountName(const std::string& name) const;
 
-    std::string getUpdateChannel() const;
-    void setUpdateChannel(const std::string& channel);
-
     std::string getUiTheme() const;
     void setUiTheme(const std::string& id);
 
@@ -414,14 +392,6 @@ public:
     void setDiscoverySubnets(const std::string& subnets);
     std::vector<akira::net::Ipv4Address> getCustomDnsServers() const;
     void setCustomDnsServers(std::vector<akira::net::Ipv4Address> servers);
-    bool getAutoCheckUpdates() const;
-    void setAutoCheckUpdates(bool enabled);
-    int64_t getLastUpdateCheck() const;
-    void setLastUpdateCheck(int64_t epochSeconds);
-    std::string getUpdateInstallPath() const;
-    void setUpdateInstallPath(const std::string& path);
-    std::string getDevUpdateServer() const;
-    void setDevUpdateServer(const std::string& server);
     int getMinBitrateForResolution(VideoResolution res) const;
 
 

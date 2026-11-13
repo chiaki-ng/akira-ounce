@@ -518,8 +518,7 @@
     "button_mapping": "按键映射",
     "disconnect": "断开连接",
     "disconnect_sleep": "断开连接并休眠",
-    "reset_gyro": "重置陀螺仪（调试）",
-    "card_players": "玩家"
+    "reset_gyro": "重置陀螺仪（调试）"
   },
   "pin": {
     "registration_error": "注册失败，请使用新的 PIN 码重试。",
@@ -528,16 +527,7 @@
     "login_prompt": "请输入您的登录 PIN 码",
     "enter_pin": "输入 PIN",
     "digits_hint": "{} 位数字，不含空格",
-    "press_a": "按 A 键输入 PIN",
-    "couch_passcode_prompt": "请输入该玩家的主机登录密码",
-    "couch_passcode_error": "密码错误，请重试。"
-  },
-  "couch": {
-    "join_failed_not_signed_in": "玩家 {} 无法加入。该账号必须已在主机上登录 PSN。",
-    "join_failed_status": "玩家 {} 无法加入（状态 {}）。",
-    "controller_arrived": "检测到另一个手柄已开启。要添加为玩家吗？",
-    "add_player": "添加玩家",
-    "not_now": "暂不"
+    "press_a": "按 A 键输入 PIN"
   },
   "remap": {
     "title": "按键映射",
@@ -639,13 +629,6 @@
     "gyro_left": "左 Joy-Con",
     "gyro_right": "右 Joy-Con",
     "sleep_on_exit": "退出时休眠主机",
-    "analog_triggers": "模拟扳机（蓝牙）",
-    "analog_triggers_not_installed": "未安装 akira-input",
-    "analog_triggers_unsupported": "此主机不可用",
-    "analog_triggers_mismatch": "akira-input 版本不匹配",
-    "analog_triggers_available": "可用",
-    "analog_triggers_failed": "后端错误",
-    "analog_triggers_degraded": "模拟扳机已停止，使用数字 ZL/ZR",
     "button_mapping": "按键映射",
     "picture_adjustments": "画面调整",
     "enable_dithering": "抖动",
@@ -663,8 +646,6 @@
     "power_user": "高级用户设置",
     "unlock_bitrate_max": "解锁最大码率",
     "unlock_bitrate_max_desc": "启用更高码率限制（720p: 25000，1080p: 30000），最低 5000",
-    "ipc_stats": "IPC Stats Service",
-    "ipc_stats_desc": "Expose stats over IPC for consumption by a sysmodule. Do not use, developer only",
     "port_guessing": "端口猜测",
     "port_guessing_desc": "猜测相邻端口以实现 NAT 穿透。适用于移动热点和端口重写型 NAT。",
     "port_guess_count": "端口猜测数量",
@@ -764,9 +745,6 @@
     "trophies_enabled": "显示奖杯页面",
     "menu_developer": "开发者",
     "dev_fake_hosts": "模拟主机（20 台 PS5）",
-    "menu_updates": "更新",
-    "simulate_update": "模拟可用更新",
-    "dev_update_server_hint": "开发更新服务器 (host:port)",
     "pair_btn": "  与伴侣应用配对",
     "discovery_log_viewer": "查看发现日志",
     "discovery_log_clear": "清除",
@@ -790,8 +768,6 @@
     "connected_controllers_none": "未检测到",
     "rumble_tier_switch": "switch 配置",
     "rumble_tier_default": "使用默认值",
-    "rumble_tier_unit": "此手柄",
-    "rumble_tier_direct": "直接发送",
     "rumble_from_haptics": "来自触觉反馈的震动",
     "haptic_intensity": "强度",
     "haptic_intensity_off": "关闭",
@@ -820,27 +796,6 @@
     "rumble_source_hint_derived": "由主机触觉信号转换，细节更丰富",
     "rumble_source_hint_game": "游戏本身发出的震动指令",
     "rumble_envelope_heading": "包络"
-  },
-  "update": {
-    "channel": "更新通道",
-    "channel_stable": "稳定版",
-    "channel_rc": "候选版本",
-    "auto_check": "启动时检查更新",
-    "check_now": "检查更新",
-    "checking": "正在检查…",
-    "up_to_date": "已是最新版本",
-    "available": "有可用更新：{}",
-    "failed": "检查更新失败",
-    "downloading": "正在下载… {}%",
-    "verifying": "正在校验…",
-    "installed_relaunch": "更新已安装。Akira 将退出到 homebrew 菜单 — 请重新启动以运行新版本。",
-    "update_now": "立即更新",
-    "skip": "跳过此版本",
-    "later": "稍后",
-    "prompt_title": "有可用更新",
-    "prompt_body": "Akira {} 已发布（当前版本 {}）。",
-    "verify_failed": "下载的更新未通过校验",
-    "install_failed": "更新安装失败"
   },
   "network": {
     "dns_failed": "查询 {} 时，DNS 服务器 {} 未能正常解析。远程和云功能可能无法使用。可在 设置 > 通用 > PlayStation 自定义 DNS 中更换服务器。",

@@ -25,7 +25,6 @@ private:
     BRLS_BIND(brls::SelectorCell, takionPs5Selector, "settings/devTakionVersionPs5");
     BRLS_BIND(brls::SelectorCell, takionPs5CloudSelector, "settings/devTakionVersionPs5Cloud");
     BRLS_BIND(brls::SelectorCell, takionPsNowSelector, "settings/devTakionVersionPsNow");
-    BRLS_BIND(brls::DetailCell, simulateUpdateCell, "settings/simulateUpdate");
     BRLS_BIND(brls::DetailCell, tlsVerifyProbeCell, "settings/tlsVerifyProbe");
     BRLS_BIND(brls::DetailCell, logBrowserCell, "settings/logBrowser");
 

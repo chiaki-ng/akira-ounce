@@ -61,8 +61,6 @@ TEST_SRC     := $(wildcard $(CURDIR)/tests/*.cpp) \
                 $(CURDIR)/source/cloud/start_steps.cpp \
                 $(CURDIR)/source/cloud/fetch_progress.cpp \
                 $(CURDIR)/source/core/pair_crypto.cpp \
-                $(CURDIR)/source/input/rumble_profile.cpp \
-                $(CURDIR)/source/input/pad_output_state.cpp \
                 $(CURDIR)/source/util/dns_client.cpp
 CORE_DIR     := $(or $(call override_path,CORE),$(CURDIR)/library/libchiaki-core)
 CORE_TEST_SRC := $(CORE_DIR)/src/platform/crypto/provider.cpp \

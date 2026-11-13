@@ -1,6 +1,5 @@
 {
   "settings/unlockBitrateMax":  { "title": "Unlock max bitrate", "body": "Raise the selectable bitrate limits for each resolution. This does not force the console to deliver the selected rate.", "image": "" },
-  "settings/ipcStats":          { "title": "IPC stats", "body": "Expose live stream statistics through Akira's IPC service for the external overlay and debugging tools.", "image": "" },
   "settings/portGuessing":      { "title": "Port guessing", "body": "Probe extra ports to improve NAT traversal on strict networks.", "image": "" },
   "settings/portGuessingCount": { "title": "Port guess count", "body": "How many candidate ports to probe.", "image": "" },
   "settings/portGuessingSocks": { "title": "Probe socket count", "body": "How many sockets to open while probing.", "image": "" },

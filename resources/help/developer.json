@@ -9,11 +9,6 @@
     "body": "Override the Remote Play streaming protocol version. Leave this on Auto unless testing protocol compatibility; an incompatible version can prevent streaming.",
     "image": ""
   },
-  "settings/simulateUpdate": {
-    "title": "Simulate update",
-    "body": "Enter a development update server and open a simulated 9.9.9 update. Choosing Update downloads, verifies, and installs from that server.",
-    "image": ""
-  },
   "settings/tlsVerifyProbe": {
     "title": "TLS verification probe",
     "body": "Test whether the HTTP service rejects expired, mismatched, self-signed, and untrusted TLS certificates. Results are written to the log.",

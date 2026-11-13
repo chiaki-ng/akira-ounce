@@ -4,7 +4,6 @@
 #include "stream/video_renderer.hpp"
 #include "core/settings_manager.hpp"
 #include "core/swipe_direction.hpp"
-#include "input/ps_output.hpp"
 #include "input/remap_target.hpp"
 #include <borealis.hpp>
 #include <cmath>
@@ -61,25 +60,7 @@ bool InputManager::init()
     padConfigureInput(8, HidNpadStyleSet_NpadStandard);
     hidInitializeTouchScreen();
 
-    setPathLocked(akira::input::DefaultPadPath(m_extended));
-
-    m_extended.initializeOptional();
-
-    if (m_bound_npad != kNoNpad)
-    {
-        HidNpadIdType wanted = m_bound_npad;
-        m_bound_npad = kNoNpad;
-        for (const auto& desc : describePadsLocked()) {
-            if (desc.npad != wanted)
-                continue;
-            auto path = akira::input::MakePath(desc, m_extended);
-            if (path) {
-                m_bound_npad = wanted;
-                setPathLocked(std::move(path));
-            }
-            break;
-        }
-    }
+    m_pad.emplace();
 
     return true;
 }
@@ -88,7 +69,6 @@ void InputManager::cleanup()
 {
     std::lock_guard<std::mutex> lock(m_state_mutex);
     m_menu_held.store(false, std::memory_order_release);
-    m_extended.shutdown();
 
     for (int i = 0; i < SDL_JOYSTICK_COUNT; i++)
     {
@@ -99,233 +79,26 @@ void InputManager::cleanup()
         }
     }
 
-    if (m_path) {
-        m_path.reset();
-        ++m_path_generation;
-    }
+    m_pad.reset();
     m_overlay_drag_finger = -1;
 }
 
-void InputManager::setPath(std::unique_ptr<akira::input::PadPath> path)
+void InputManager::sendRumble(float left, float right, float freqLow, float freqHigh)
 {
     std::lock_guard<std::mutex> lock(m_state_mutex);
-    setPathLocked(std::move(path));
+    if (m_pad)
+        m_pad->sendRumble(left, right, freqLow, freqHigh);
 }
 
-void InputManager::setPathLocked(std::unique_ptr<akira::input::PadPath> path)
-{
-    if (!path)
-        return;
-
-    if (m_path)
-        m_path->sendRumble(0.0f, 0.0f, 0.0f, 0.0f);
-    m_path = std::move(path);
-    ++m_path_generation;
-
-    brls::Logger::info("InputManager: input path is now {}", m_path->label());
-}
-
-PadPathInfo InputManager::pathInfo() const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return pathInfoLocked();
-}
-
-PadPathInfo InputManager::pathInfoLocked() const
-{
-    PadPathInfo info;
-    info.generation = m_path_generation;
-    if (!m_path)
-        return info;
-
-    info.available = true;
-    info.kind = m_path->kind();
-    info.npad = m_path->npad();
-    info.style = m_path->style();
-    info.vendorId = m_path->vendorId();
-    info.productId = m_path->productId();
-    info.nativeRumble = m_path->nativeRumble();
-    info.switchNative = m_path->switchNative();
-    if (const uint8_t* address = m_path->address()) {
-        std::copy_n(address, info.address.size(), info.address.begin());
-        info.hasAddress = true;
-    }
-    return info;
-}
-
-void InputManager::sendRumble(float left, float right, float freqLow, float freqHigh,
-    float nonNativeScale)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    if (!m_path)
-        return;
-    if (!m_path->nativeRumble()) {
-        left *= nonNativeScale;
-        right *= nonNativeScale;
-    }
-    m_path->sendRumble(left, right, freqLow, freqHigh);
-}
-
-void InputManager::sendTriggerEffects(const akira::input::PadPath::TriggerEffect& left,
-    const akira::input::PadPath::TriggerEffect& right)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    if (m_path)
-        m_path->sendTriggerEffects(left, right);
-}
-
-void InputManager::sendEffectIntensity(uint8_t vibration, uint8_t trigger)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    if (m_path)
-        m_path->sendEffectIntensity(vibration, trigger);
-}
-
-void InputManager::sendLightbar(uint8_t red, uint8_t green, uint8_t blue)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    if (m_path)
-        m_path->sendLightbar(red, green, blue);
-}
-
-std::vector<akira::input::PadDescription> InputManager::describePads()
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return describePadsLocked();
-}
-
-std::vector<akira::input::PadDescription> InputManager::describePadsLocked()
-{
-    return akira::input::DescribePads(m_extended);
-}
-
-void InputManager::selectNpad(HidNpadIdType npad)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-
-    for (const auto& desc : describePadsLocked()) {
-        if (desc.npad != npad)
-            continue;
-
-        auto path = akira::input::MakePath(desc, m_extended);
-        if (!path)
-            break;
-
-        m_bound_npad = npad;
-
-        brls::Logger::info("InputManager: using {} on npad {}", path->label(), (int)npad);
-        setPathLocked(std::move(path));
-        return;
-    }
-
-    brls::Logger::warning("InputManager: npad {} no longer present, falling back to default", (int)npad);
-    setPathLocked(akira::input::DefaultPadPath(m_extended));
-}
-
-void InputManager::retryPathIdentification()
-{
-    if (m_identify_done)
-        return;
-
-    const uint32_t now = (uint32_t)(armTicksToNs(armGetSystemTick()) / 1000000ull);
-
-    if (m_identify_until == 0) {
-        m_identify_until = now + 10000;
-        m_identify_next  = now;
-    }
-
-    if (akira::input::PadTakesDirectOutput(m_path->vendorId(), m_path->productId())) {
-        m_identify_done = true;
-        return;
-    }
-
-    if (now > m_identify_until) {
-        m_identify_done = true;
-        return;
-    }
-
-    if (m_arrival_pending || m_couch_claim_active) {
-        m_identify_until = now + 10000;
-        m_identify_next  = now;
-        return;
-    }
-
-    if (now < m_identify_next)
-        return;
-    m_identify_next = now + 1000;
-
-    for (const auto& desc : describePadsLocked()) {
-        if (desc.kind != akira::input::PadPathKind::McPsNative)
-            continue;
-        if (m_couch_roster.find(desc.npad) != m_couch_roster.end())
-            continue;
-        if (m_bound_npad != kNoNpad && desc.npad != m_bound_npad)
-            continue;
-
-        auto path = akira::input::MakePath(desc, m_extended);
-        if (!path)
-            continue;
-
-        brls::Logger::info("InputManager: {} identified on npad {} after the path was chosen"
-                           " - upgrading from {}",
-                           path->label(), (int)desc.npad, m_path->label());
-
-        m_bound_npad    = desc.npad;
-        m_identify_done = true;
-        setPathLocked(std::move(path));
-        return;
-    }
-}
-
-void InputManager::reconcilePathDriver()
-{
-    if (m_bound_npad == kNoNpad)
-        return;
-
-    const uint32_t now = (uint32_t)(armTicksToNs(armGetSystemTick()) / 1000000ull);
-    if (now < m_driver_next)
-        return;
-    m_driver_next = now + 1000;
-
-    for (const auto& desc : describePadsLocked()) {
-        if (desc.npad != m_bound_npad)
-            continue;
-
-        const akira::input::PadDriver driver =
-            akira::input::ResolvePadDriver(desc, m_extended);
-        const bool native_now = m_path->nativeRumble();
-
-        if ((driver == akira::input::PadDriver::Akira) == native_now)
-            return;
-
-        auto path = akira::input::MakePath(desc, m_extended);
-        if (!path)
-            return;
-
-        brls::Logger::info("InputManager: pad on npad {} is now driven by {}"
-                           " - {} to {}",
-                           (int)desc.npad, akira::input::PadDriverName(driver),
-                           m_path->label(), path->label());
-        setPathLocked(std::move(path));
-        return;
-    }
-}
-
-void InputManager::applyPadInput(akira::input::PadPath* path, libchiaking::controllers::ControllerState& state)
+void InputManager::applyPadInput(libchiaking::controllers::ControllerState& state)
 {
     state.buttons = 0;
     state.l2 = 0x00;
     state.r2 = 0x00;
 
-    const bool mapped = path->usesButtonMapping();
-
-    u64 buttons = mapped ? path->heldButtons() : 0;
+    u64 buttons = m_pad->heldButtons();
     u64 consumedButtons = 0;
 
-    if (!mapped) {
-        path->readButtons(state);
-        path->readTriggers(state);
-    } else {
     const ButtonMapping& mapping = SettingsManager::getInstance()->getButtonMapping();
     for (const auto& [chiakiBtn, combo] : mapping) {
         if (combo.size() <= 1) continue;
@@ -387,11 +160,8 @@ void InputManager::applyPadInput(akira::input::PadPath* path, libchiaking::contr
         }
     }
 
-    path->readTriggers(state);
-    }
-
-    HidAnalogStickState left = path->stickPos(0);
-    HidAnalogStickState right = path->stickPos(1);
+    HidAnalogStickState left = m_pad->stickPos(0);
+    HidAnalogStickState right = m_pad->stickPos(1);
 
     static constexpr u64 leftStickDirs = HidNpadButton_StickLUp | HidNpadButton_StickLDown
                                        | HidNpadButton_StickLLeft | HidNpadButton_StickLRight;
@@ -415,491 +185,47 @@ void InputManager::applyPadInput(akira::input::PadPath* path, libchiaking::contr
     }
 }
 
-uint8_t InputManager::couchJoin(HidNpadIdType npad)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return couchJoinLocked(npad);
-}
-
-uint8_t InputManager::couchJoinLocked(HidNpadIdType npad)
-{
-    if (npad == m_bound_npad)
-        return kNoCouchSlot;
-    auto existing = m_couch_roster.find(npad);
-    if (existing != m_couch_roster.end())
-        return existing->second;
-    for (uint8_t slot = 1; slot < libchiaking::controllers::SeatNumber::count; slot++)
-    {
-        bool taken = false;
-        for (const auto& entry : m_couch_roster)
-        {
-            if (entry.second == slot)
-            {
-                taken = true;
-                break;
-            }
-        }
-        if (!taken)
-        {
-            m_couch_roster[npad] = slot;
-            return slot;
-        }
-    }
-    return kNoCouchSlot;
-}
-
-uint64_t InputManager::couchNpadMask() const
-{
-    uint64_t mask = 0;
-    for (const auto& entry : m_couch_roster)
-        mask |= 1UL << (uint32_t)entry.first;
-    return mask;
-}
-
-void InputManager::couchLeave(HidNpadIdType npad)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    couchLeaveLocked(npad);
-}
-
-void InputManager::couchLeaveLocked(HidNpadIdType npad)
-{
-    m_couch_roster.erase(npad);
-    m_secondary_paths.erase(npad);
-    m_secondary_missing_since.erase(npad);
-}
-
-uint8_t InputManager::couchPadCount() const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return couchPadCountLocked();
-}
-
-uint8_t InputManager::couchPadCountLocked() const
-{
-    uint8_t count = 1;
-    for (const auto& entry : m_couch_roster)
-    {
-        if (entry.second + 1 > count)
-            count = (uint8_t)(entry.second + 1);
-    }
-    return count;
-}
-
-uint8_t InputManager::CouchPadIndexForController(HidNpadIdType npad)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    if (npad == m_bound_npad)
-        return 0;
-    auto it = m_couch_roster.find(npad);
-    if (it != m_couch_roster.end())
-        return it->second;
-    return kNoCouchSlot;
-}
-
-bool InputManager::couchSlotOutputTarget(uint8_t slot, uint8_t out_addr[6], uint16_t* vendor_id,
-                                         uint16_t* product_id)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-
-    if (slot == 0 || slot == kNoCouchSlot)
-        return false;
-
-    HidNpadIdType npad = kNoNpad;
-    for (const auto& entry : m_couch_roster) {
-        if (entry.second == slot) {
-            npad = entry.first;
-            break;
-        }
-    }
-    if (npad == kNoNpad)
-        return false;
-
-    for (const auto& desc : describePadsLocked()) {
-        if (desc.npad != npad)
-            continue;
-        if (!desc.has_address)
-            return false;
-        if (out_addr)
-            std::memcpy(out_addr, desc.bt_addr, 6);
-        if (vendor_id)
-            *vendor_id = desc.vendor_id;
-        if (product_id)
-            *product_id = desc.product_id;
-        return true;
-    }
-    return false;
-}
-
-void InputManager::readSecondaryPads(std::span<libchiaking::controllers::ControllerInput> states, uint8_t& count)
-{
-    DeferredCallbacks callbacks;
-    std::unique_lock<std::mutex> lock(m_state_mutex);
-    if (m_couch_roster.empty())
-    {
-        m_secondary_paths.clear();
-        m_couch_pads.clear();
-        count = couchPadCountLocked();
-        return;
-    }
-    const auto now = akira::input::timing::Clock::now();
-    if (m_couch_pads.empty() || now - m_couch_pads_read >= akira::input::DirectDiscoveryPeriod)
-    {
-        m_couch_pads = describePadsLocked();
-        m_couch_pads_read = now;
-    }
-    const auto& pads = m_couch_pads;
-    std::vector<std::pair<HidNpadIdType, uint8_t>> disconnected;
-
-    for (const auto& entry : m_couch_roster)
-    {
-        HidNpadIdType npad = entry.first;
-        uint8_t slot = entry.second;
-        if (slot == 0 || slot >= states.size())
-            continue;
-
-        states[slot].set_idle();
-        if (slot + 1 > count)
-            count = (uint8_t)(slot + 1);
-
-        const akira::input::PadDescription* found = nullptr;
-        for (const auto& desc : pads)
-        {
-            if (desc.npad == npad)
-            {
-                found = &desc;
-                break;
-            }
-        }
-        if (!found)
-        {
-            auto [missing, firstMiss] = m_secondary_missing_since.try_emplace(npad, now);
-            if (firstMiss)
-                brls::Logger::warning("Couch: slot {} npad {} disappeared; sending idle input",
-                                      (int)slot, (int)npad);
-            if (now - missing->second >= akira::input::timing::DisconnectGrace)
-                disconnected.emplace_back(npad, slot);
-            continue;
-        }
-
-        m_secondary_missing_since.erase(npad);
-
-        auto& cached = m_secondary_paths[npad];
-        if (!cached)
-            cached = akira::input::MakePath(*found, m_extended);
-        if (!cached)
-            continue;
-        cached->poll();
-        applyPadInput(cached.get(), states[slot].state());
-    }
-
-    for (const auto& entry : disconnected)
-    {
-        brls::Logger::warning("Couch: removing disconnected slot {} npad {}",
-                              (int)entry.second, (int)entry.first);
-        couchLeaveLocked(entry.first);
-        if (m_on_couch_disconnected) {
-            auto callback = m_on_couch_disconnected;
-            callbacks.emplace_back([callback, entry]() {
-                callback(entry.first, entry.second);
-            });
-        }
-    }
-
-    count = couchPadCountLocked();
-
-    for (auto it = m_secondary_paths.begin(); it != m_secondary_paths.end(); )
-    {
-        if (m_couch_roster.find(it->first) == m_couch_roster.end())
-            it = m_secondary_paths.erase(it);
-        else
-            ++it;
-    }
-
-    lock.unlock();
-    for (auto& callback : callbacks)
-        callback();
-}
-
-std::map<HidNpadIdType, uint8_t> InputManager::couchRoster() const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return m_couch_roster;
-}
-
-float InputManager::couchClaimProgress() const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-
-    if (!m_couch_claim_active)
-        return 0.0f;
-
-    const auto now = akira::input::timing::Clock::now();
-    float bestProgress = 0.0f;
-    for (const auto& entry : m_claim_started_at)
-        bestProgress = std::max(bestProgress, akira::input::timing::progress(
-            entry.second, now, akira::input::timing::CouchClaimHold));
-    return bestProgress;
-}
-
-bool InputManager::couchClaimActive() const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return m_couch_claim_active;
-}
-
-void InputManager::setOnCouchJoined(std::function<void(HidNpadIdType, uint8_t)> callback)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    m_on_couch_joined = std::move(callback);
-}
-
-void InputManager::setOnCouchDisconnected(std::function<void(HidNpadIdType, uint8_t)> callback)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    m_on_couch_disconnected = std::move(callback);
-}
-
-void InputManager::setOnPadArrived(std::function<void(HidNpadIdType)> callback)
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    m_on_pad_arrived = std::move(callback);
-}
-
-HidNpadIdType InputManager::boundNpad() const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return m_bound_npad;
-}
-
-void InputManager::resolvePadArrival()
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    m_arrival_pending = false;
-}
-
-void InputManager::beginCouchJoin()
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    m_couch_claim_active = true;
-    m_claim_started_at.clear();
-}
-
-void InputManager::cancelCouchJoin()
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    m_couch_claim_active = false;
-    m_arrival_pending = false;
-    m_claim_started_at.clear();
-}
-
-void InputManager::tickCouchClaim()
-{
-    DeferredCallbacks callbacks;
-    std::unique_lock<std::mutex> lock(m_state_mutex);
-    pollCouchClaim(callbacks);
-    lock.unlock();
-    for (auto& callback : callbacks)
-        callback();
-}
-
-void InputManager::promptControllerSetup()
-{
-    HidLaControllerSupportArg arg;
-    hidLaCreateControllerSupportArg(&arg);
-    arg.hdr.player_count_max = libchiaking::controllers::SeatNumber::count;
-    arg.hdr.enable_single_mode = false;
-    HidLaControllerSupportResultInfo result;
-    hidLaShowControllerSupport(&result, &arg);
-}
-
-bool InputManager::isClaimableNpad(HidNpadIdType npad) const
-{
-    std::lock_guard<std::mutex> lock(m_state_mutex);
-    return isClaimableNpadLocked(npad);
-}
-
-bool InputManager::isClaimableNpadLocked(HidNpadIdType npad) const
-{
-    if (npad == m_bound_npad)
-        return false;
-    if ((uint32_t)npad >= 8)
-        return false;
-    return true;
-}
-
-void InputManager::pollPadArrivals(DeferredCallbacks& callbacks)
-{
-    const auto now = akira::input::timing::Clock::now();
-    if (!m_arrival_cadence.due(now))
-        return;
-
-    static constexpr HidNpadIdType kArrivalScan[] = {
-        HidNpadIdType_No1,
-        HidNpadIdType_No2,
-        HidNpadIdType_No3,
-        HidNpadIdType_No4,
-    };
-
-    uint32_t mask = 0;
-    for (HidNpadIdType npad : kArrivalScan)
-    {
-        PadState probe{};
-        padInitializeWithMask(&probe, 1UL << (uint32_t)npad);
-        padUpdate(&probe);
-        if (padIsConnected(&probe))
-            mask |= 1UL << (uint32_t)npad;
-    }
-
-    const uint32_t previous = m_connected_mask;
-    m_connected_mask = mask;
-    m_announced_mask &= mask;
-
-    if (!m_arrival_primed)
-    {
-        m_arrival_primed = true;
-        m_announced_mask = mask;
-        return;
-    }
-
-    if (!m_on_pad_arrived)
-        return;
-
-    const uint32_t arrived = mask & ~previous & ~m_announced_mask;
-    if (!arrived)
-        return;
-
-    for (HidNpadIdType npad : kArrivalScan)
-    {
-        const uint32_t bit = 1UL << (uint32_t)npad;
-        if (!(arrived & bit))
-            continue;
-        if (npad == m_bound_npad)
-            continue;
-        if (m_couch_roster.find(npad) != m_couch_roster.end())
-            continue;
-
-        m_announced_mask |= bit;
-        m_arrival_pending = true;
-        brls::Logger::info("Couch: controller appeared on npad {}", (int)npad);
-        auto callback = m_on_pad_arrived;
-        callbacks.emplace_back([callback, npad]() { callback(npad); });
-        return;
-    }
-}
-
-void InputManager::pollCouchClaim(DeferredCallbacks& callbacks)
-{
-    if (!m_couch_claim_active)
-        return;
-
-    auto pads = describePadsLocked();
-    const auto now = akira::input::timing::Clock::now();
-    for (auto it = m_claim_started_at.begin(); it != m_claim_started_at.end();) {
-        const bool present = std::any_of(pads.begin(), pads.end(), [it](const auto& pad) {
-            return pad.npad == it->first;
-        });
-        if (!present)
-            it = m_claim_started_at.erase(it);
-        else
-            ++it;
-    }
-    for (const auto& desc : pads)
-    {
-        HidNpadIdType npad = desc.npad;
-        if (!isClaimableNpadLocked(npad))
-            continue;
-        if (m_couch_roster.find(npad) != m_couch_roster.end())
-            continue;
-
-        PadState pad;
-        padInitializeWithMask(&pad, 1UL << (uint32_t)npad);
-        padUpdate(&pad);
-        u64 btns = padGetButtons(&pad);
-        bool combo = (btns & HidNpadButton_ZL) && (btns & HidNpadButton_ZR);
-
-        if (combo)
-        {
-            auto [started, firstSample] = m_claim_started_at.try_emplace(npad, now);
-            if (!firstSample && now - started->second >= akira::input::timing::CouchClaimHold)
-            {
-                uint8_t slot = couchJoinLocked(npad);
-                m_claim_started_at.clear();
-                m_couch_claim_active = false;
-                if (slot != kNoCouchSlot && m_on_couch_joined) {
-                    auto callback = m_on_couch_joined;
-                    callbacks.emplace_back([callback, npad, slot]() { callback(npad, slot); });
-                }
-                return;
-            }
-        }
-        else
-        {
-            m_claim_started_at.erase(npad);
-        }
-    }
-}
-
 void InputManager::update(libchiaking::controllers::ControllerInput& input, std::map<uint32_t, int8_t>* finger_id_touch_id)
 {
-    DeferredCallbacks callbacks;
-    std::unique_lock<std::mutex> lock(m_state_mutex);
+    std::lock_guard<std::mutex> lock(m_state_mutex);
 
-    pollPadArrivals(callbacks);
-    pollCouchClaim(callbacks);
-
-    if (!m_path)
+    if (!m_pad)
     {
         input.set_idle();
-        lock.unlock();
-        for (auto& callback : callbacks)
-            callback();
         return;
     }
-
-    retryPathIdentification();
-    reconcilePathDriver();
 
     const auto now = akira::input::gesture::Clock::now();
 
-    m_path->setExcludedNpads(couchNpadMask());
+    m_pad->poll();
+    m_menu_held.store(m_pad->menuHeld(), std::memory_order_release);
 
-    m_path->poll();
-    m_menu_held.store(m_path->menuHeld(), std::memory_order_release);
+    applyPadInput(input.state());
 
-    applyPadInput(m_path.get(), input.state());
+    const u64 buttons = m_pad->heldButtons();
 
-    u64 buttons = m_path->usesButtonMapping() ? m_path->heldButtons() : 0;
+    readTouchScreen(input, finger_id_touch_id, now);
+    updateSyntheticSwipes(input, buttons, now);
 
-    if (!m_path->readTouchpad(input))
+    if (m_touchpad_button_pulse.scheduled)
     {
-        readTouchScreen(input, finger_id_touch_id, now);
-        updateSyntheticSwipes(input, buttons, now);
-
-        if (m_touchpad_button_pulse.scheduled)
+        if (now >= m_touchpad_button_pulse.releaseAt)
         {
-            if (now >= m_touchpad_button_pulse.releaseAt)
-            {
-                m_touchpad_button_pulse.scheduled = false;
-                fireDeferredRelease(input);
-            }
-            else if (now >= m_touchpad_button_pulse.pressAt)
-            {
-                input.state().buttons |= button(libchiaking::controllers::ControllerButton::touchpad);
-            }
-        }
-        else
-        {
+            m_touchpad_button_pulse.scheduled = false;
             fireDeferredRelease(input);
         }
+        else if (now >= m_touchpad_button_pulse.pressAt)
+        {
+            input.state().buttons |= button(libchiaking::controllers::ControllerButton::touchpad);
+        }
+    }
+    else
+    {
+        fireDeferredRelease(input);
     }
 
     if (m_motion_cadence.due(now))
         readSixAxis(input.state());
-
-    lock.unlock();
-    for (auto& callback : callbacks)
-        callback();
 }
 
 void InputManager::fireDeferredRelease(libchiaking::controllers::ControllerInput& input)
@@ -1135,9 +461,10 @@ bool InputManager::readTouchScreen(libchiaking::controllers::ControllerInput& in
 
 bool InputManager::readSixAxis(libchiaking::controllers::ControllerState& state)
 {
-    HidSixAxisSensorState sixaxis = {0};
-    if (!m_path->readGyro(&sixaxis))
+    auto reading = m_pad->readGyro();
+    if (!reading)
         return false;
+    HidSixAxisSensorState& sixaxis = *reading;
 
     state.gyro_x = sixaxis.angular_velocity.x * 2.0f * M_PI;
     state.gyro_y = sixaxis.angular_velocity.z * 2.0f * M_PI;
@@ -1198,14 +525,14 @@ void InputManager::resetMotionControls()
 {
     std::lock_guard<std::mutex> lock(m_state_mutex);
 
-    if (!m_path)
+    if (!m_pad)
         return;
 
     m_accel_zero_x = m_raw_accel_x;
     m_accel_zero_y = m_raw_accel_y - 1.0f;
     m_accel_zero_z = m_raw_accel_z;
 
-    m_path->resetMotion();
+    m_pad->resetMotion();
 
     brls::Logger::info("Motion controls reset: zero offset = ({}, {}, {})",
         m_accel_zero_x, m_accel_zero_y, m_accel_zero_z);
@@ -1235,8 +562,8 @@ void InputManager::updateSyntheticSwipes(libchiaking::controllers::ControllerInp
 
     const ButtonMapping& mapping = SettingsManager::getInstance()->getButtonMapping();
 
-    HidAnalogStickState leftStick = m_path->stickPos(0);
-    HidAnalogStickState rightStick = m_path->stickPos(1);
+    HidAnalogStickState leftStick = m_pad->stickPos(0);
+    HidAnalogStickState rightStick = m_pad->stickPos(1);
 
     static const char* swipeNames[4] = { "UP", "DOWN", "LEFT", "RIGHT" };
 

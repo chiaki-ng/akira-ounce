@@ -39,12 +39,6 @@
                     marginRight="15"/>
 
 
-                <brls:BooleanCell
-                    id="settings/ipcStats"
-                    title="@i18n/akira/settings/ipc_stats"
-                    marginLeft="15"
-                    marginRight="15"/>
-
 
                 <brls:BooleanCell
                     id="settings/portGuessing"

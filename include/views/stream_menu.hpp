@@ -20,11 +20,9 @@ public:
     void setOnDismiss(std::function<void()> callback);
     void setOnGyroReset(std::function<void()> callback);
     void setOnButtonMapping(std::function<void()> callback);
-    void setOnPlayers(std::function<void()> callback);
 
     void setStatsMode(StatsOverlayMode mode);
     void setSleepAvailable(bool available);
-    void setPlayersAvailable(bool available);
     void setConsoleName(const std::string& name) { consoleName = name; }
     void setConsoleIsPs5(bool ps5) { consolePs5 = ps5; }
 
@@ -77,7 +75,6 @@ private:
     int optionCursor = -1;
     bool inPanel = false;
     bool sleepAvailable = true;
-    bool playersAvailable = true;
     std::string consoleName = "PlayStation";
     bool consolePs5 = false;
 
@@ -105,7 +102,6 @@ private:
     std::function<void()> onDismiss;
     std::function<void()> onGyroReset;
     std::function<void()> onButtonMapping;
-    std::function<void()> onPlayers;
 };
 
 #endif // AKIRA_STREAM_MENU_HPP

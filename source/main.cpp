@@ -46,10 +46,8 @@
 #include "core/settings_manager.hpp"
 #include "core/chiaki_core.hpp"
 #include "core/wireguard_manager.hpp"
-#include "core/update_manager.hpp"
 #include "core/discovery_manager.hpp"
 #include "ui/akira_header.hpp"
-#include "views/update_flow.hpp"
 #include "util/crash_report.hpp"
 #include "akira_version.h"
 
@@ -505,8 +503,6 @@ public:
             akiraOpenSettings();
             return true;
         }, false);
-
-        akira::UpdateFlow::checkOnLaunch();
     }
 };
 
@@ -526,8 +522,6 @@ int main(int argc, char* argv[])
     akira::AppLog::open(settings->getEnableFileLogging() ? SettingsManager::getLogFilePath() : std::string("sdmc:/switch/akira.log"));
     akira::CrashReport::stage("log open");
     brls::Logger::info("akira {} starting", AKIRA_VERSION_STRING);
-
-    akira::UpdateManager::setSelfPath(argc > 0 && argv[0] ? argv[0] : "");
 
     for (int i = 1; i < argc; i++)
     {
@@ -626,8 +620,6 @@ int main(int argc, char* argv[])
 
     AppletType appletType = appletGetAppletType();
     brls::Logger::info("Applet type: {} ({})", appletTypeToString(appletType), static_cast<int>(appletType));
-
-    Session::GetInstance()->SetMesaConfig();
 
     brls::Application::registerXMLView("HostListTab", HostListTab::create);
     brls::Application::registerXMLView("PsnGatedBox", PsnGatedBox::create);

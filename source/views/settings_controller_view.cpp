@@ -1,6 +1,5 @@
 #include "views/settings_controller_view.hpp"
 #include "views/controller_remap_view.hpp"
-#include "input/extended_input_manager.hpp"
 #include "input/pad_path.hpp"
 #include "views/settings_controllers_view.hpp"
 

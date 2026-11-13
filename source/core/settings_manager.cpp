@@ -516,10 +516,6 @@ void SettingsManager::parseTomlFile() {
 
         if (auto val = config["input"]["haptic"].value<int64_t>())
             globalHaptic = static_cast<HapticPreset>(*val);
-        if (auto val = config["input"]["direct_rumble_in_stream"].value<bool>())
-            directRumbleInStream = *val;
-        if (auto val = config["input"]["direct_haptics_in_stream"].value<bool>())
-            directHapticsInStream = *val;
         if (auto val = config["input"]["gyro_source"].value<int64_t>())
             globalGyroSource = static_cast<GyroSource>(*val);
 
@@ -553,22 +549,6 @@ void SettingsManager::parseTomlFile() {
                     const int64_t clamped = std::max<int64_t>(0, std::min<int64_t>(5, *v));
                     profile.haptic_intensity = static_cast<akira::input::HapticIntensity>(clamped);
                 }
-                if (auto v = (*entry)["direct_output"].value<bool>())
-                    profile.output_mode = *v ? akira::input::PadOutputMode::Native
-                                             : akira::input::PadOutputMode::Basic;
-                if (auto v = (*entry)["output_mode"].value<int64_t>())
-                    profile.output_mode = (*v == 1) ? akira::input::PadOutputMode::Basic
-                                                    : akira::input::PadOutputMode::Native;
-
-                if (auto v = (*entry)["lightbar_enabled"].value<bool>())
-                    profile.lightbar_enabled = *v;
-                if (auto v = (*entry)["lightbar_r"].value<int64_t>())
-                    profile.lightbar_r = (std::uint8_t)std::clamp<int64_t>(*v, 0, 255);
-                if (auto v = (*entry)["lightbar_g"].value<int64_t>())
-                    profile.lightbar_g = (std::uint8_t)std::clamp<int64_t>(*v, 0, 255);
-                if (auto v = (*entry)["lightbar_b"].value<int64_t>())
-                    profile.lightbar_b = (std::uint8_t)std::clamp<int64_t>(*v, 0, 255);
-
                 auto source = (*entry)["rumble_source"].value<int64_t>();
                 if (!source)
                     source = (*entry)["console_feedback"].value<int64_t>();
@@ -618,15 +598,6 @@ void SettingsManager::parseTomlFile() {
             }
         }
 
-        if (rumbleProfiles.find(akira::input::kRumbleKeyDualSense) == rumbleProfiles.end()) {
-            akira::input::RumbleProfile ds = akira::input::DefaultRumbleProfile();
-
-            ds.output_mode    = akira::input::PadOutputMode::Native;
-            ds.rumble_source  = sourceFromLegacyPreset(globalHaptic);
-            rumbleProfiles[akira::input::kRumbleKeyDualSense] = ds;
-        }
-        if (rumbleProfiles.find(akira::input::kRumbleKeyGeneric) == rumbleProfiles.end())
-            rumbleProfiles[akira::input::kRumbleKeyGeneric] = akira::input::DefaultRumbleProfile();
         if (rumbleProfiles.find(akira::input::kRumbleKeyDefault) == rumbleProfiles.end())
             rumbleProfiles[akira::input::kRumbleKeyDefault] = akira::input::DefaultRumbleProfile();
 
@@ -678,15 +649,6 @@ void SettingsManager::parseTomlFile() {
         if (auto val = config["ui"]["connection_show_stages"].value<bool>())
             connectionShowStages = *val;
 
-        if (auto val = config["updates"]["channel"].value<std::string>())
-            updateChannel = *val;
-        if (auto val = config["updates"]["auto_check"].value<bool>())
-            autoCheckUpdates = *val;
-        if (auto val = config["updates"]["last_check"].value<int64_t>())
-            lastUpdateCheck = *val;
-        if (auto val = config["updates"]["install_path"].value<std::string>())
-            updateInstallPath = *val;
-
         if (auto val = config["debug"]["locale"].value<std::string>())
             debugLocale = *val;
         if (auto val = config["debug"]["file_logging"].value<bool>())
@@ -708,16 +670,12 @@ void SettingsManager::parseTomlFile() {
             debugDiscoveryLog = *val;
         if (auto val = config["debug"]["ffmpeg_log"].value<bool>())
             debugFfmpegLog = *val;
-        if (auto val = config["debug"]["ipc_stats"].value<bool>())
-            ipcStatsEnabled = *val;
         if (auto val = config["debug"]["fake_hosts"].value<bool>())
             devFakeHosts = *val;
         if (auto val = config["debug"]["power_user_menu_unlocked"].value<bool>())
             powerUserMenuUnlocked = *val;
         if (auto val = config["debug"]["unlock_bitrate_max"].value<bool>())
             unlockBitrateMax = *val;
-        if (auto val = config["debug"]["update_server"].value<std::string>())
-            devUpdateServer = *val;
 
         if (auto mappingTable = config["input"]["button_mapping"].as_table()) {
             for (auto& [key, value] : *mappingTable) {
@@ -1141,15 +1099,6 @@ toml::table SettingsManager::ownedSettings() {
     }
 
     {
-        toml::table updates;
-        updates.insert("channel", updateChannel);
-        updates.insert("auto_check", autoCheckUpdates);
-        if (lastUpdateCheck != 0) updates.insert("last_check", lastUpdateCheck);
-        if (!updateInstallPath.empty()) updates.insert("install_path", updateInstallPath);
-        config.insert("updates", std::move(updates));
-    }
-
-    {
         toml::table debug;
         if (!debugLocale.empty()) debug.insert("locale", debugLocale);
         if (enableFileLogging) debug.insert("file_logging", true);
@@ -1161,11 +1110,9 @@ toml::table SettingsManager::ownedSettings() {
             debug.insert("chiaki_log_level", chiakiLogVerbosityToString(chiakiLogVerbosity));
         if (debugDiscoveryLog) debug.insert("discovery_log", true);
         if (debugFfmpegLog) debug.insert("ffmpeg_log", true);
-        if (ipcStatsEnabled) debug.insert("ipc_stats", true);
         if (devFakeHosts) debug.insert("fake_hosts", true);
         if (powerUserMenuUnlocked) debug.insert("power_user_menu_unlocked", true);
         if (unlockBitrateMax) debug.insert("unlock_bitrate_max", true);
-        if (!devUpdateServer.empty()) debug.insert("update_server", devUpdateServer);
         if (!debug.empty())
             config.insert("debug", std::move(debug));
     }
@@ -1191,12 +1138,6 @@ toml::table SettingsManager::ownedSettings() {
 
             entry.insert("haptic_intensity",
                          static_cast<int64_t>(std::to_underlying(profile.haptic_intensity)));
-            entry.insert("output_mode",
-                         static_cast<int64_t>(std::to_underlying(profile.output_mode)));
-            entry.insert("lightbar_enabled", profile.lightbar_enabled);
-            entry.insert("lightbar_r", (int64_t)profile.lightbar_r);
-            entry.insert("lightbar_g", (int64_t)profile.lightbar_g);
-            entry.insert("lightbar_b", (int64_t)profile.lightbar_b);
             entry.insert("rumble_source",
                          static_cast<int64_t>(std::to_underlying(profile.rumble_source)));
 
@@ -1724,38 +1665,19 @@ void SettingsManager::setHaptic(Host* host, const std::string& value) {
     setHaptic(host, preset);
 }
 
-std::string SettingsManager::resolveRumbleKey(uint16_t vendorId, uint16_t productId,
-                                              const uint8_t* address, bool switchNative,
-                                              bool joycon) const
+std::string SettingsManager::resolveRumbleKey(bool joycon) const
 {
-
-    if (address != nullptr) {
-        const std::string unit = akira::input::RumbleKeyForUnit(address);
-        if (rumbleProfiles.find(unit) != rumbleProfiles.end())
-            return unit;
-    }
-
-    if (vendorId != 0 || productId != 0) {
-        const std::string model = akira::input::RumbleKeyForModel(vendorId, productId);
-        if (rumbleProfiles.find(model) != rumbleProfiles.end())
-            return model;
-    }
-
-    const std::string category =
-        akira::input::RumbleKeyForCategory(
-            akira::input::PadCategoryFor(vendorId, productId, switchNative, joycon));
+    const std::string category = joycon ? akira::input::kRumbleKeyJoyCon
+                                        : akira::input::kRumbleKeySwitchPro;
     if (rumbleProfiles.find(category) != rumbleProfiles.end())
         return category;
 
     return akira::input::kRumbleKeyDefault;
 }
 
-akira::input::RumbleProfile SettingsManager::resolveRumbleProfile(uint16_t vendorId, uint16_t productId,
-                                                                  const uint8_t* address,
-                                                                  bool switchNative,
-                                                                  bool joycon) const
+akira::input::RumbleProfile SettingsManager::resolveRumbleProfile(bool joycon) const
 {
-    return getRumbleProfile(resolveRumbleKey(vendorId, productId, address, switchNative, joycon));
+    return getRumbleProfile(resolveRumbleKey(joycon));
 }
 
 akira::input::RumbleProfile SettingsManager::getRumbleProfile(const std::string& key) const
@@ -1782,16 +1704,10 @@ void SettingsManager::setRumbleProfile(const std::string& key, const akira::inpu
     rumbleProfiles[key] = profile;
 }
 
-bool SettingsManager::seedRumbleProfile(const std::string& key,
-                                        const akira::input::RumbleProfile* inheritFrom)
+bool SettingsManager::seedRumbleProfile(const std::string& key)
 {
     if (key.empty() || hasRumbleProfile(key))
         return false;
-
-    if (inheritFrom != nullptr) {
-        rumbleProfiles[key] = *inheritFrom;
-        return true;
-    }
 
     rumbleProfiles[key] = key == akira::input::kRumbleKeySwitch
                               ? akira::input::SwitchRumbleProfile()
@@ -1809,10 +1725,6 @@ void SettingsManager::resetRumbleProfile(const std::string& key)
                               : akira::input::DefaultRumbleProfile();
 }
 
-bool SettingsManager::getDirectRumbleInStream() const { return directRumbleInStream; }
-void SettingsManager::setDirectRumbleInStream(bool value) { directRumbleInStream = value; }
-bool SettingsManager::getDirectHapticsInStream() const { return directHapticsInStream; }
-void SettingsManager::setDirectHapticsInStream(bool value) { directHapticsInStream = value; }
 
 
 std::optional<libchiaking::consoles::Firmware> SettingsManager::firmwareFromTarget(int64_t target) {
@@ -2104,14 +2016,6 @@ void SettingsManager::setPowerUserMenuUnlocked(bool unlocked) {
     powerUserMenuUnlocked = unlocked;
 }
 
-bool SettingsManager::getIpcStatsEnabled() const {
-    return ipcStatsEnabled;
-}
-
-void SettingsManager::setIpcStatsEnabled(bool enabled) {
-    ipcStatsEnabled = enabled;
-}
-
 bool SettingsManager::getUnlockBitrateMax() const {
     return unlockBitrateMax;
 }
@@ -2150,14 +2054,6 @@ void SettingsManager::setDevFakeHosts(bool enabled) {
     devFakeHosts = enabled;
 }
 
-std::string SettingsManager::getUpdateChannel() const {
-    return updateChannel;
-}
-
-void SettingsManager::setUpdateChannel(const std::string& channel) {
-    updateChannel = channel;
-}
-
 std::string SettingsManager::getUiTheme() const {
     return uiTheme;
 }
@@ -2181,38 +2077,6 @@ std::vector<akira::net::Ipv4Address> SettingsManager::getCustomDnsServers() cons
 void SettingsManager::setCustomDnsServers(std::vector<akira::net::Ipv4Address> servers) {
     customDnsServers = std::move(servers);
     akira::net::CustomDns::instance().configure(customDnsServers);
-}
-
-bool SettingsManager::getAutoCheckUpdates() const {
-    return autoCheckUpdates;
-}
-
-void SettingsManager::setAutoCheckUpdates(bool enabled) {
-    autoCheckUpdates = enabled;
-}
-
-int64_t SettingsManager::getLastUpdateCheck() const {
-    return lastUpdateCheck;
-}
-
-void SettingsManager::setLastUpdateCheck(int64_t epochSeconds) {
-    lastUpdateCheck = epochSeconds;
-}
-
-std::string SettingsManager::getUpdateInstallPath() const {
-    return updateInstallPath;
-}
-
-void SettingsManager::setUpdateInstallPath(const std::string& path) {
-    updateInstallPath = path;
-}
-
-std::string SettingsManager::getDevUpdateServer() const {
-    return devUpdateServer;
-}
-
-void SettingsManager::setDevUpdateServer(const std::string& server) {
-    devUpdateServer = server;
 }
 
 int SettingsManager::getMinBitrateForResolution(VideoResolution res) const {

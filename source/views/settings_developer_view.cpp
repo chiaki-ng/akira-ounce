@@ -1,7 +1,6 @@
 #include "views/settings_developer_view.hpp"
 #include "views/host_list_tab.hpp"
 #include "views/log_browser_view.hpp"
-#include "views/update_flow.hpp"
 
 #include <borealis/core/i18n.hpp>
 
@@ -128,7 +127,6 @@ SettingsDeveloperView::SettingsDeveloperView() {
     initTakionSelector(takionPsNowSelector, TakionTarget::PSNow, "akira/settings/dev_takion_version_ps_now"_i18n,
         DeveloperTuning::implemented_protocol_versions(libchiaking::catalog::ServiceGeneration::old_service));
 
-    simulateUpdateCell->setText("akira/settings/simulate_update"_i18n);
     tlsVerifyProbeCell->setText("akira/settings/dev_tls_verify_probe"_i18n);
     logBrowserCell->setText("akira/settings/dev_logs"_i18n);
     logBrowserCell->setDetailText(SettingsManager::LOG_DIR);
@@ -143,11 +141,6 @@ SettingsDeveloperView::SettingsDeveloperView() {
         HttpPool::instance().submit([cell, guard = alive](HttpSession& session) {
             runTlsVerifyProbe(session, cell, guard);
         });
-        return true;
-    });
-
-    simulateUpdateCell->registerClickAction([](brls::View*) {
-        akira::UpdateFlow::simulate();
         return true;
     });
 }

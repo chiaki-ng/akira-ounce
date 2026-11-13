@@ -22,22 +22,17 @@ public:
 
 private:
     void buildHeader();
-    void buildOutputRows();
     void buildSourceRows();
     void buildEnvelopeRows();
     void buildIntensityRow();
     void buildStrengthRows();
     void buildFrequencyRows();
-    void buildLightbarRows();
     void buildGyroRow();
     void buildActionRows();
-
-    bool takesDirectOutput() const;
 
     void store();
     void reopen();
     void previewBuzz();
-    void previewDirectBuzz();
 
     brls::Box* content = nullptr;
 
@@ -45,9 +40,6 @@ private:
     akira::input::PadDescription m_pad;
     akira::input::RumbleProfile  m_profile;
 
-    akira::input::PadDriverState m_driver;
-
-    brls::Box* m_lightbar_swatch = nullptr;
     std::string                  m_key;
 
     std::shared_ptr<bool> m_alive = std::make_shared<bool>(true);

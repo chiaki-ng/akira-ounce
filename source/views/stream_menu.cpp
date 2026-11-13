@@ -196,11 +196,6 @@ void StreamMenu::buildCards()
             onButtonMapping();
     }));
 
-    cards.push_back(std::make_unique<PlayersCard>(playersAvailable, [this]() {
-        if (onPlayers)
-            onPlayers();
-    }));
-
     cards.push_back(std::make_unique<MotionCard>([this]() {
         if (onGyroReset)
             onGyroReset();
@@ -371,11 +366,6 @@ void StreamMenu::setOnButtonMapping(std::function<void()> callback)
     onButtonMapping = std::move(callback);
 }
 
-void StreamMenu::setOnPlayers(std::function<void()> callback)
-{
-    onPlayers = std::move(callback);
-}
-
 void StreamMenu::setStatsMode(StatsOverlayMode mode)
 {
     statsMode = mode;
@@ -385,12 +375,6 @@ void StreamMenu::setStatsMode(StatsOverlayMode mode)
 void StreamMenu::setSleepAvailable(bool available)
 {
     sleepAvailable = available;
-    buildCards();
-}
-
-void StreamMenu::setPlayersAvailable(bool available)
-{
-    playersAvailable = available;
     buildCards();
 }
 
@@ -742,25 +726,6 @@ void StreamMenu::drawGlyph(NVGcontext* vg, CardGlyph g, float x, float y, float 
                 nvgFillColor(vg, c);
                 nvgFill(vg);
             }
-            break;
-        }
-        case CardGlyph::Party:
-        {
-            nvgBeginPath(vg);
-            nvgCircle(vg, x + s * 0.36f, y + s * 0.32f, s * 0.14f);
-            stroked(vg, c, s * 0.08f);
-
-            nvgBeginPath(vg);
-            nvgArc(vg, x + s * 0.36f, y + s * 0.82f, s * 0.27f, 3.34f, 6.08f, NVG_CW);
-            stroked(vg, c, s * 0.08f);
-
-            nvgBeginPath(vg);
-            nvgArc(vg, x + s * 0.60f, y + s * 0.44f, s * 0.17f, -1.0f, 1.0f, NVG_CW);
-            stroked(vg, c, s * 0.075f);
-
-            nvgBeginPath(vg);
-            nvgArc(vg, x + s * 0.60f, y + s * 0.44f, s * 0.32f, -1.0f, 1.0f, NVG_CW);
-            stroked(vg, c, s * 0.075f);
             break;
         }
         case CardGlyph::Chat:

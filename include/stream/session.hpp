@@ -25,7 +25,6 @@ class HapticManager;
 class InputManager;
 class StreamDecoder;
 class IVideoRenderer;
-class IpcStatsService;
 
 class Session
 {
@@ -41,7 +40,6 @@ private:
     std::unique_ptr<StreamDecoder> m_video_decoder;
     std::unique_ptr<IVideoRenderer> m_video_renderer;
     std::unique_ptr<akira::stream::VideoWorker> m_video_worker;
-    std::unique_ptr<IpcStatsService> m_ipc_service;
     std::optional<libchiaking::media::AudioDecoder> m_audio_decoder;
 
     StatsOverlayMode m_stats_overlay_mode = StatsOverlayMode::Off;
@@ -89,10 +87,10 @@ public:
     void setEnvelopeAttack(float attack);
     void setRumbleCeiling(float ceiling);
     void setRumbleSource(akira::input::RumbleSource source);
+    void setHapticIntensity(akira::input::HapticIntensity intensity);
 
     ~Session();
 
-    void SetMesaConfig();
     void describeStream(const libchiaking::media::StreamDescription& description);
     libchiaking::media::VideoResult submitVideo(const libchiaking::media::VideoUnit& unit);
     libchiaking::media::AudioResult submitAudio(const libchiaking::media::AudioUnit& unit);
@@ -103,20 +101,8 @@ public:
     bool FreeController();
     bool MainLoop();
     void UpdateControllerState(libchiaking::controllers::ControllerInput& input, std::map<uint32_t, int8_t>* finger_id_touch_id);
-
-    void UpdateSecondaryPads(std::span<libchiaking::controllers::ControllerInput> states, uint8_t& count);
     void SetRumble(uint8_t left, uint8_t right);
-
-    void SetTriggerEffects(const libchiaking::controllers::TriggerEffects& effects);
-
-    void SetEffectIntensity(uint8_t vibration, uint8_t trigger);
-
-    void SetLedColor(uint8_t red, uint8_t green, uint8_t blue);
-
-private:
-    uint8_t m_trigger_intensity = 1;
-
-public:
+    void SetConsoleVibration(uint8_t vibration);
     void HapticCB(std::span<const std::byte> pcm);
     void CleanUpHaptic();
 

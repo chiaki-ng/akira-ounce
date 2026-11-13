@@ -10,7 +10,6 @@ enum class CardGlyph
     Pad,
     Motion,
     Picture,
-    Party,
     Chat,
     Power,
 };

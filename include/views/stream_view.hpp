@@ -40,7 +40,6 @@ public:
 
     brls::View* getDefaultFocus() override { return this; }
 
-    bool beginPadChoice();
     void startStream();
     void stopStream();
     void setSessionAlreadyStarted(bool started) { sessionPreStarted = started; }
@@ -48,10 +47,6 @@ public:
     static brls::View* create();
 
 private:
-    void waitForPads(int attempt);
-    void abandonBeforeStart();
-    void finishPadChoice();
-
     Host* host = nullptr;
     std::shared_ptr<Host> hostOwner;
     akira::BackgroundWork::Pause backgroundPause;
@@ -63,7 +58,6 @@ private:
     bool streamActive = false;
     bool sessionStarted = false;
     bool sessionPreStarted = false;
-    bool padChoiceDone = false;
     bool controllerReady = false;
 
     bool menuOpen = false;
@@ -80,8 +74,6 @@ private:
     bool intentionalDisconnect = false;
     bool reconnecting = false;
     bool loginPinEnteredThisSession = false;
-    bool couchPasscodeDialogOpen = false;
-    bool couchArrivalPromptOpen = false;
     std::chrono::steady_clock::time_point minusHoldStart;
     bool minusWasHeld = false;
     brls::Event<>::Subscription exitSubscription;
@@ -103,17 +95,9 @@ private:
     void onEnded(const libchiaking::play::Outcome& outcome) override;
     void onRefused(const libchiaking::play::StartRefusal& refusal) override;
     void onLoginPinNeeded(bool previousWasWrong) override;
-    void onSeatPasscodeNeeded(uint8_t slot, bool retry) override;
-    void onSeatRefused(uint8_t slot, const libchiaking::play::SeatRefusal& refusal) override;
-    void onSeatDropped(uint8_t slot) override;
 
     static akira::input::RumbleProfile activePadProfile();
     void openConnection();
-    void pauseStreamForUi();
-    void resumeStreamAfterUi();
-    void onPadArrived(HidNpadIdType npad);
-    void openCouchClaim();
-    void openPrimaryControllerPicker();
 
     void checkMenuTrigger();
     void prepareVideoPipelineTick();

@@ -61,10 +61,6 @@ struct StreamStats
     float visual_ms = 0.0f;
     float total_ms = 0.0f;
     bool latency_valid = false;
-
-    bool analog_triggers_active = false;
-    uint8_t analog_l2 = 0;
-    uint8_t analog_r2 = 0;
 };
 
 #endif // AKIRA_IO_STREAM_STATS_HPP

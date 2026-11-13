@@ -217,8 +217,3 @@ std::string MotionCard::label() const
 {
     return "akira/stream_menu/card_motion"_i18n;
 }
-
-std::string PlayersCard::label() const
-{
-    return "akira/stream_menu/card_players"_i18n;
-}

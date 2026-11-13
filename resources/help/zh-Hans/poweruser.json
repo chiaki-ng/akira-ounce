@@ -4,11 +4,6 @@
     "body": "提高各分辨率可选的码率范围。此设置不会强制主机提供所选码率。",
     "image": ""
   },
-  "settings/ipcStats": {
-    "title": "IPC 统计",
-    "body": "通过 Akira 的 IPC 服务提供实时串流统计，供外部叠加层和调试工具使用。",
-    "image": ""
-  },
   "settings/portGuessing": {
     "title": "端口猜测",
     "body": "探测额外端口以改善严格网络下的 NAT 穿透。",

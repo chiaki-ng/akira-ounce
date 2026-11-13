@@ -47,7 +47,6 @@ include(vendored_libs)
 # Source files
 ###########################################
 file(GLOB_RECURSE MAIN_SRC CONFIGURE_DEPENDS source/*.cpp)
-list(APPEND MAIN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/source/stream/nxext_ipc_server.c)
 
 # Switch wrapper for libnx initialization
 list(APPEND MAIN_SRC ${BOREALIS_LIBRARY}/lib/platforms/switch/switch_wrapper.c)
@@ -80,8 +79,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/library/qrcodegen
     # Generated version header (configure_file in cmake/version.cmake)
     ${CMAKE_BINARY_DIR}/generated
-    # Shared IPC definitions
-    ${CMAKE_CURRENT_SOURCE_DIR}/overlay/common/include
     # Borealis includes
     ${BOREALIS_LIBRARY}/include
     # WireGuard

@@ -6,7 +6,7 @@
   },
   "settings/connectedControllers": {
     "title": "已连接的手柄",
-    "body": "打开每个手柄的输出、灯条、触觉反馈和震动设置。请先唤醒手柄，以便 Akira 检测到它。",
+    "body": "打开每个手柄的触觉反馈和震动设置。请先唤醒手柄，以便 Akira 检测到它。",
     "image": ""
   },
   "settings/buttonMapping": {

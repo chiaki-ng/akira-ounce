@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <ranges>
 #include <utility>
 
 #include <borealis.hpp>
@@ -178,8 +177,7 @@ void Connection::feed(play::Session& running, const platform::StopToken& stop)
     auto next = core.clock().now_microseconds();
     auto journalDue = next;
 
-    for (auto& input : inputs)
-        input.set_idle();
+    controllerInput.set_idle();
 
     while (!stop.stop_requested() && running.state() != play::SessionState::ended)
     {
@@ -211,24 +209,14 @@ void Connection::sendInput(play::Session& running)
     if (inputSuppressed.load(std::memory_order_acquire))
     {
         fingerIdTouchId.clear();
-        for (auto& input : inputs)
-            input.set_idle();
+        controllerInput.set_idle();
     }
     else
     {
-        media.UpdateControllerState(inputs[0], &fingerIdTouchId);
-        uint8_t count = 1;
-        media.UpdateSecondaryPads(inputs, count);
-        couchPadCount = count;
+        media.UpdateControllerState(controllerInput, &fingerIdTouchId);
     }
 
-    static_cast<void>(running.controllers().send(libchiaking::controllers::SeatNumber::first(), inputs[0].state()));
-    for (uint8_t slot = 1; slot < couchPadCount && slot < seatCount; slot++)
-    {
-        const auto seat = libchiaking::controllers::SeatNumber::create(slot);
-        if (seat && running.seats().seat(*seat).state() == play::SeatState::playing)
-            static_cast<void>(running.controllers().send(*seat, inputs[slot].state()));
-    }
+    static_cast<void>(running.controllers().send(libchiaking::controllers::SeatNumber::first(), controllerInput.state()));
 }
 
 auto Connection::session() const -> std::shared_ptr<play::Session>
@@ -278,117 +266,6 @@ void Connection::setInputSuppressed(bool suppressed)
     inputSuppressed.store(suppressed, std::memory_order_release);
 }
 
-bool Connection::addPlayer(uint8_t slot, std::optional<int64_t> profileId)
-{
-    const auto seat = libchiaking::controllers::SeatNumber::create(slot);
-    const auto running = session();
-    if (!seat || seat->is_first() || !running)
-        return false;
-
-    auto* settings = SettingsManager::getInstance();
-    std::optional<libchiaking::AccountId> account;
-    std::string label;
-    if (ps5)
-    {
-        const Profile* profile = profileId ? settings->findProfile(*profileId) : nullptr;
-        if (!profile)
-            return false;
-        account = libchiaking::AccountId::from_base64(profile->accountId);
-        if (!account)
-        {
-            brls::Logger::error("Couch: profile {} has an invalid account id", *profileId);
-            return false;
-        }
-        label = profile->label();
-    }
-
-    const auto kind = ps5 ? libchiaking::controllers::ControllerKind::console_default : libchiaking::controllers::ControllerKind::dualshock4;
-    const auto added = running->seats().add_player(*seat, kind, account);
-    CouchSeat& entry = seats[slot];
-    entry = CouchSeat{};
-    entry.accountLabel = label;
-    entry.profileId = profileId.value_or(0);
-    if (!added)
-    {
-        brls::Logger::error("Couch: join for player {} refused: {}", slot + 1, static_cast<int>(added.error()));
-        entry.phase = SeatPhase::Failed;
-        entry.refusal = play::SeatRefusal::not_sent(*seat, play::EndReason::Cause::invalid_state);
-        return false;
-    }
-    brls::Logger::info("Couch: requesting player {}", slot + 1);
-    entry.phase = SeatPhase::Joining;
-    return true;
-}
-
-void Connection::removePlayer(uint8_t slot)
-{
-    const auto seat = libchiaking::controllers::SeatNumber::create(slot);
-    if (!seat || seat->is_first())
-        return;
-    seats[slot] = CouchSeat{};
-    if (const auto running = session())
-    {
-        brls::Logger::info("Couch: closing pad for player {}", slot + 1);
-        static_cast<void>(running->seats().remove_player(*seat));
-    }
-}
-
-void Connection::sendSeatPasscode(uint8_t slot, std::string_view passcode)
-{
-    const auto seat = libchiaking::controllers::SeatNumber::create(slot);
-    const auto running = session();
-    auto code = libchiaking::AccessCode::parse(passcode);
-    if (!seat || !running || !code)
-        return;
-    seats[slot].phase = SeatPhase::Joining;
-    static_cast<void>(running->seats().enter_passcode(*seat, std::move(*code)));
-}
-
-auto Connection::couchSeat(uint8_t slot) const -> const CouchSeat&
-{
-    static const CouchSeat empty;
-    return slot < seatCount ? seats[slot] : empty;
-}
-
-bool Connection::couchSlotAvailable() const
-{
-    if (!session())
-        return false;
-    for (uint8_t slot = 1; slot < seatCount; slot++)
-    {
-        if (seats[slot].phase == SeatPhase::Empty)
-            return true;
-    }
-    return false;
-}
-
-bool Connection::seatPlaying(uint8_t slot) const
-{
-    const auto seat = libchiaking::controllers::SeatNumber::create(slot);
-    const auto running = session();
-    return seat && running && running->seats().seat(*seat).state() == play::SeatState::playing;
-}
-
-auto Connection::couchProfileChoices(uint8_t slot) const -> std::vector<CouchProfileChoice>
-{
-    std::vector<CouchProfileChoice> choices;
-    auto* settings = SettingsManager::getInstance();
-    if (!ps5 || !settings || slot == 0 || slot >= seatCount)
-        return choices;
-
-    const int64_t activeProfileId = settings->getActiveProfileId();
-    for (const Profile& profile : settings->getProfiles())
-    {
-        if (profile.id == activeProfileId || profile.accountId.empty())
-            continue;
-        const bool assignedElsewhere = std::ranges::any_of(std::views::iota(uint8_t{1}, seatCount),
-            [&](uint8_t other) { return other != slot && seats[other].phase != SeatPhase::Empty && seats[other].profileId == profile.id; });
-        if (!assignedElsewhere)
-            choices.push_back({profile.id, profile.label(), profile.accountId, profile.avatarUrl});
-    }
-    return choices;
-}
-
 void Connection::on_stream_description(const libchiaking::media::StreamDescription& description)
 {
     media.describeStream(description);
@@ -416,10 +293,7 @@ auto Connection::decoder_name() const -> std::string_view
 void Connection::on_feedback(const libchiaking::controllers::ControllerFeedback& feedback)
 {
     if (feedback.seat.is_added())
-    {
-        routeCouchFeedback(feedback);
         return;
-    }
 
     if (const auto* haptics = feedback.get<libchiaking::controllers::HapticAudio>())
     {
@@ -430,63 +304,14 @@ void Connection::on_feedback(const libchiaking::controllers::ControllerFeedback&
     {
         media.SetRumble(rumble->left, rumble->right);
     }
-    else if (const auto* effects = feedback.get<libchiaking::controllers::TriggerEffects>())
-    {
-        media.SetTriggerEffects(*effects);
-    }
     else if (const auto* haptic = feedback.get<libchiaking::controllers::HapticIntensity>())
     {
-        hapticIntensity = static_cast<uint8_t>(haptic->level);
-        media.SetEffectIntensity(hapticIntensity, triggerIntensity);
-    }
-    else if (const auto* trigger = feedback.get<libchiaking::controllers::TriggerIntensity>())
-    {
-        triggerIntensity = static_cast<uint8_t>(trigger->level);
-        media.SetEffectIntensity(hapticIntensity, triggerIntensity);
-    }
-    else if (const auto* light = feedback.get<libchiaking::controllers::Lightbar>())
-    {
-        media.SetLedColor(light->colour.red, light->colour.green, light->colour.blue);
+        media.SetConsoleVibration(static_cast<uint8_t>(haptic->level));
     }
     else if (feedback.get<libchiaking::controllers::MotionReset>())
     {
         if (auto* input = media.getInputManager())
             input->resetMotionControls();
-    }
-}
-
-void Connection::routeCouchFeedback(const libchiaking::controllers::ControllerFeedback& feedback)
-{
-    const uint8_t slot = feedback.seat.index();
-    auto* input = media.getInputManager();
-    if (!input || !seatPlaying(slot))
-        return;
-
-    uint8_t addr[6];
-    uint16_t vid = 0;
-    uint16_t pid = 0;
-    if (!input->couchSlotOutputTarget(slot, addr, &vid, &pid))
-        return;
-
-    if (const auto* rumble = feedback.get<libchiaking::controllers::Rumble>())
-    {
-        input->extendedInput().registerCouchOutput(addr, vid, pid);
-        input->extendedInput().setCouchRumble(addr, rumble->left, rumble->right);
-    }
-    else if (const auto* effects = feedback.get<libchiaking::controllers::TriggerEffects>())
-    {
-        input->extendedInput().registerCouchOutput(addr, vid, pid);
-        input->extendedInput().setCouchTriggerEffects(addr,
-            effects->left.mode, effects->left.parameters.data(),
-            effects->right.mode, effects->right.parameters.data());
-    }
-    else if (const auto* confirmed = feedback.get<libchiaking::controllers::SeatConfirmed>())
-    {
-        const auto& colour = confirmed->colour;
-        if ((colour.red | colour.green | colour.blue) == 0)
-            return;
-        input->extendedInput().registerCouchOutput(addr, vid, pid);
-        input->extendedInput().setCouchLightbar(addr, colour.red, colour.green, colour.blue);
     }
 }
 
@@ -514,54 +339,6 @@ void Connection::on_launch_progress(const play::LaunchProgress& progress)
 void Connection::on_login_pin_needed(bool previousWasWrong)
 {
     post([previousWasWrong](Connection&, ConnectionListener& to) { to.onLoginPinNeeded(previousWasWrong); });
-}
-
-void Connection::on_seat_passcode_needed(libchiaking::controllers::SeatNumber seat, bool retry)
-{
-    post([slot = seat.index(), retry](Connection& self, ConnectionListener& to) {
-        self.seats[slot].phase = SeatPhase::Passcode;
-        to.onSeatPasscodeNeeded(slot, retry);
-    });
-}
-
-void Connection::on_seat_joined(libchiaking::controllers::SeatNumber seat, libchiaking::controllers::SeatLight)
-{
-    post([slot = seat.index()](Connection& self, ConnectionListener&) {
-        if (self.seats[slot].phase == SeatPhase::Empty)
-            return;
-        self.seats[slot].phase = SeatPhase::Playing;
-        self.seats[slot].refusal.reset();
-    });
-}
-
-void Connection::on_seat_left(libchiaking::controllers::SeatNumber seat)
-{
-    post([slot = seat.index()](Connection& self, ConnectionListener& to) {
-        if (self.seats[slot].phase == SeatPhase::Empty)
-            return;
-        brls::Logger::info("Couch: console dropped player {}", slot + 1);
-        self.seats[slot].phase = SeatPhase::Failed;
-        self.seats[slot].dropped = true;
-        to.onSeatDropped(slot);
-    });
-}
-
-void Connection::on_seat_refused(const play::SeatRefusal& refusal)
-{
-    post([refusal](Connection& self, ConnectionListener& to) {
-        if (!refusal.seat())
-        {
-            brls::Logger::error("Couch: no free seat on the console");
-            return;
-        }
-        const uint8_t slot = refusal.seat()->index();
-        brls::Logger::error("Couch: join for player {} refused, kind {}", slot + 1, static_cast<int>(refusal.kind()));
-        if (self.seats[slot].phase == SeatPhase::Empty)
-            return;
-        self.seats[slot].phase = SeatPhase::Failed;
-        self.seats[slot].refusal = refusal;
-        to.onSeatRefused(slot, refusal);
-    });
 }
 
 }
