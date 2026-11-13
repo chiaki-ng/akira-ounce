@@ -83,6 +83,7 @@ private:
         bool idr = false;
         bool parameters_changed = false;
         bool has_sps = false;
+        bool has_slices = false;
     };
 
     static std::vector<NalUnit> splitNalUnits(std::span<const std::uint8_t> sample);

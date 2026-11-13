@@ -171,7 +171,10 @@ StreamDecoder::Keyframe StreamDecoder::scanNalUnits(std::span<const std::uint8_t
         else if (unit.type == NalIdr)
             keyframe.idr = true;
         if (unit.type >= NalSlice && unit.type <= NalIdr)
+        {
+            keyframe.has_slices = true;
             break;
+        }
     }
     return keyframe;
 }
@@ -271,6 +274,8 @@ bool StreamDecoder::decode(const AVBufferHandle& data, std::size_t size)
     publishStats(decode_entry);
 
     const Keyframe keyframe = scanNalUnits(sample);
+    if (!keyframe.has_slices)
+        return true;
     if (m_waiting_for_idr)
     {
         if (!keyframe.idr || m_sps.empty() || m_pps.empty())
