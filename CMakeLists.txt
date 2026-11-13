@@ -47,6 +47,10 @@ include(vendored_libs)
 # Source files
 ###########################################
 file(GLOB_RECURSE MAIN_SRC CONFIGURE_DEPENDS source/*.cpp)
+if (NOT AKIRA_CLOUD)
+    list(FILTER MAIN_SRC EXCLUDE REGEX "/source/cloud/(service|library_listing|library_view|game_detail_view|game_actions|launch_checks|launch_screen|fetch_progress|start_steps|cloud_connect_task)\\.cpp$")
+    list(FILTER MAIN_SRC EXCLUDE REGEX "/source/views/cloud_shortcuts_rail\\.cpp$")
+endif()
 
 # Switch wrapper for libnx initialization
 list(APPEND MAIN_SRC ${BOREALIS_LIBRARY}/lib/platforms/switch/switch_wrapper.c)
@@ -99,7 +103,9 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 option(MUTE_CHIAKI_LOGS "Drop every core log line" OFF)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_MUTE_CORE_LOGS=$<BOOL:${MUTE_CHIAKI_LOGS}>)
+target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_CLOUD=$<BOOL:${AKIRA_CLOUD}>)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_PS5_CLOUD_LAUNCH=$<BOOL:${AKIRA_PS5_CLOUD_LAUNCH}>)
+target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_PS4_CLOUD_LAUNCH=$<BOOL:${AKIRA_PS4_CLOUD_LAUNCH}>)
 
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

@@ -1,5 +1,7 @@
 #include "core/chiaki_core.hpp"
+#if AKIRA_CLOUD
 #include "cloud/service.hpp"
+#endif
 #include "core/settings_manager.hpp"
 #include "util/crash_report.hpp"
 
@@ -112,7 +114,9 @@ void ChiakiCore::rememberSaved()
         brls::Logger::error("[CORE] saved consoles could not be read");
 
     psnAccounts.emplace(*chiakiNg, settings, threadingProvider, steadyClock, random());
+#if AKIRA_CLOUD
     psnAccounts->setRenewedObserver([] { cloud::Service::instance().refreshInBackground(); });
+#endif
 }
 
 }
