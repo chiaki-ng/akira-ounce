@@ -7,6 +7,7 @@
 #include <borealis/core/assets.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <bit>
 #include <cmath>
 #include <format>
@@ -39,6 +40,12 @@ VulkanRenderer::PlaneImport::PlaneImport(PlaneLayout layout, std::variant<ImageP
         m_bases = texels->bases;
     else
         m_bases = {};
+}
+
+void VulkanRenderer::PlaneImport::copyFrom(const void* backing)
+{
+    if (auto* texels = std::get_if<TexelPlanes>(&m_planes); texels && texels->mapped && backing)
+        std::memcpy(texels->mapped, backing, texels->size);
 }
 
 void VulkanRenderer::PlaneImport::appendAcquireBarriers(std::vector<VkImageMemoryBarrier2>& barriers)
@@ -332,9 +339,7 @@ bool VulkanRenderer::queryCapabilities()
     m_caps.imageMaxExtent = imageExtent.value_or(VkExtent3D{});
     m_caps.texelPlanes = queryTexelPlanes();
 
-    if (m_caps.imagePlanes)
-        m_path = PlanePath::Image;
-    else if (m_caps.texelPlanes)
+    if (m_caps.texelPlanes)
         m_path = PlanePath::TexelBuffer;
     else
     {
@@ -343,9 +348,7 @@ bool VulkanRenderer::queryCapabilities()
         return false;
     }
 
-    brls::Logger::info("VulkanRenderer: zero-copy plane path is {} (host pointer alignment {}, texel fallback {})",
-        m_path == PlanePath::Image ? "linear DRM-modifier images" : "uniform texel buffers",
-        m_caps.hostPointerAlignment, m_caps.texelPlanes ? "available" : "unavailable");
+    brls::Logger::info("VulkanRenderer: decoded planes are copied into uniform texel buffers each frame");
     return true;
 }
 
@@ -443,20 +446,6 @@ bool VulkanRenderer::queryTexelPlanes() const
         }
     }
 
-    const VkPhysicalDeviceExternalBufferInfo info{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO,
-        .usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
-        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
-    };
-    VkExternalBufferProperties properties{
-        .sType = VK_STRUCTURE_TYPE_EXTERNAL_BUFFER_PROPERTIES,
-    };
-    vkGetPhysicalDeviceExternalBufferProperties(m_vctx->physicalDevice(), &info, &properties);
-    if ((properties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) == 0)
-    {
-        brls::Logger::info("VulkanRenderer: texel buffers cannot import host allocations");
-        return false;
-    }
     return true;
 }
 
@@ -684,37 +673,14 @@ std::optional<VulkanRenderer::HostRange> VulkanRenderer::hostRange(const PlaneLa
         brls::Logger::error("VulkanRenderer: decoder frame has no backing memory or an empty size");
         return std::nullopt;
     }
-
-    const auto address = reinterpret_cast<std::uintptr_t>(layout.backing);
-    const VkDeviceSize alignment = m_caps.hostPointerAlignment;
-    const VkDeviceSize size = layout.backingSize / alignment * alignment;
     const VkDeviceSize required = std::max(layout.lumaEnd(), layout.chromaEnd());
-
-    if (address % alignment != 0)
+    if (required > layout.backingSize)
     {
-        brls::Logger::error("VulkanRenderer: decoder backing {:#x} is not aligned to minImportedHostPointerAlignment "
-            "{:#x}, the frame cannot be imported", address, alignment);
+        brls::Logger::error("VulkanRenderer: decoder backing of {:#x} bytes is short of the {:#x} bytes the NV12 planes "
+            "span", layout.backingSize, required);
         return std::nullopt;
     }
-    if (size < required)
-    {
-        brls::Logger::error("VulkanRenderer: decoder backing of {:#x} bytes rounds down to {:#x} at import alignment "
-            "{:#x}, short of the {:#x} bytes the NV12 planes span", layout.backingSize, size, alignment, required);
-        return std::nullopt;
-    }
-
-    VkMemoryHostPointerPropertiesEXT properties{
-        .sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT,
-    };
-    if (!succeeded(m_get_host_pointer_properties(m_device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
-            layout.backing, &properties), "vkGetMemoryHostPointerPropertiesEXT"))
-        return std::nullopt;
-    if (properties.memoryTypeBits == 0)
-    {
-        brls::Logger::error("VulkanRenderer: no memory type can import the decoder backing at {:#x}", address);
-        return std::nullopt;
-    }
-    return HostRange{ properties.memoryTypeBits, size };
+    return HostRange{ ~0U, required };
 }
 
 std::optional<VulkanRenderer::DeviceMemory> VulkanRenderer::importHostMemory(const PlaneLayout& layout,
@@ -849,7 +815,7 @@ std::optional<VulkanRenderer::ImagePlanes> VulkanRenderer::importImagePlanes(con
     };
 }
 
-std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::importTexelPlanes(const PlaneLayout& layout,
+std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::stagingTexelPlanes(const PlaneLayout& layout,
     const HostRange& range) const
 {
     if (layout.chroma.offset % 2 != 0 || layout.chroma.pitch % 2 != 0)
@@ -859,13 +825,8 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::importTexelPlanes(con
         return std::nullopt;
     }
 
-    const VkExternalMemoryBufferCreateInfo external{
-        .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO,
-        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
-    };
     const VkBufferCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext = &external,
         .size = range.size,
         .usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
@@ -877,17 +838,26 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::importTexelPlanes(con
 
     VkMemoryRequirements requirements{};
     vkGetBufferMemoryRequirements(m_device, buffer.get(), &requirements);
-    if (requirements.size > range.size)
+    const auto type = m_vctx->findMemoryType(requirements.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    if (!type)
     {
-        brls::Logger::error("VulkanRenderer: texel buffer needs {:#x} bytes but only {:#x} are importable",
-            requirements.size, range.size);
+        brls::Logger::error("VulkanRenderer: no host-visible coherent memory type can back the plane buffer");
         return std::nullopt;
     }
-
-    auto memory = importHostMemory(layout, range.typeBits & requirements.memoryTypeBits, range.size);
-    if (!memory)
+    const VkMemoryAllocateInfo allocation{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = requirements.size,
+        .memoryTypeIndex = *type,
+    };
+    VkDeviceMemory memoryHandle = VK_NULL_HANDLE;
+    if (!succeeded(vkAllocateMemory(m_device, &allocation, nullptr, &memoryHandle), "vkAllocateMemory (plane copy)"))
         return std::nullopt;
-    if (!succeeded(vkBindBufferMemory(m_device, buffer.get(), memory->get(), 0), "vkBindBufferMemory (host planes)"))
+    DeviceMemory memory(m_device, memoryHandle);
+    if (!succeeded(vkBindBufferMemory(m_device, buffer.get(), memory.get(), 0), "vkBindBufferMemory (plane copy)"))
+        return std::nullopt;
+    void* mapped = nullptr;
+    if (!succeeded(vkMapMemory(m_device, memory.get(), 0, VK_WHOLE_SIZE, 0, &mapped), "vkMapMemory (plane copy)"))
         return std::nullopt;
 
     const VkDeviceSize lumaAlignment = m_caps.texelOffsetAlignment;
@@ -926,7 +896,7 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::importTexelPlanes(con
         return std::nullopt;
 
     return TexelPlanes{
-        .memory = std::move(*memory),
+        .memory = std::move(memory),
         .buffer = std::move(buffer),
         .luma = std::move(*lumaView),
         .chroma = std::move(*chromaView),
@@ -936,6 +906,8 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::importTexelPlanes(con
             static_cast<std::uint32_t>((layout.chroma.offset - chromaOffset) / 2),
             layout.chroma.pitch / 2,
         },
+        .mapped = mapped,
+        .size = static_cast<std::size_t>(range.size),
     };
 }
 
@@ -967,7 +939,7 @@ std::unique_ptr<VulkanRenderer::PlaneImport> VulkanRenderer::importPlanes(const 
         return std::make_unique<PlaneImport>(layout, std::move(*planes), *set);
     }
 
-    auto planes = importTexelPlanes(layout, range);
+    auto planes = stagingTexelPlanes(layout, range);
     if (!planes)
         return nullptr;
     const auto set = allocateSet(cache.pool(), m_shared.texelSetLayout.get());
@@ -1037,7 +1009,10 @@ VulkanRenderer::PlaneImport* VulkanRenderer::acquireImport(const Frame& frame)
     }
 
     if (PlaneImport* existing = m_cache->find(slot))
+    {
+        existing->copyFrom(layout.backing);
         return existing;
+    }
     if (m_cache->failed(slot))
         return nullptr;
 
@@ -1063,7 +1038,9 @@ VulkanRenderer::PlaneImport* VulkanRenderer::acquireImport(const Frame& frame)
             "dropped", slot, frame->generation());
         return nullptr;
     }
-    return &m_cache->store(slot, std::move(created));
+    PlaneImport& stored = m_cache->store(slot, std::move(created));
+    stored.copyFrom(layout.backing);
+    return &stored;
 }
 
 VkPipelineLayout VulkanRenderer::layoutFor(const PipelineKey& key) const

@@ -174,6 +174,8 @@ private:
         BufferView luma;
         BufferView chroma;
         std::array<std::uint32_t, 4> bases{};
+        void* mapped = nullptr;
+        std::size_t size = 0;
     };
 
     class PlaneImport
@@ -185,6 +187,7 @@ private:
         VkDescriptorSet descriptorSet() const { return m_set; }
         const std::array<std::uint32_t, 4>& bases() const { return m_bases; }
         void appendAcquireBarriers(std::vector<VkImageMemoryBarrier2>& barriers);
+        void copyFrom(const void* backing);
 
     private:
         PlaneLayout m_layout;
@@ -391,7 +394,7 @@ private:
     std::optional<DeviceMemory> importHostMemory(const PlaneLayout& layout, std::uint32_t typeBits,
         VkDeviceSize size) const;
     std::optional<ImagePlanes> importImagePlanes(const PlaneLayout& layout, const HostRange& range) const;
-    std::optional<TexelPlanes> importTexelPlanes(const PlaneLayout& layout, const HostRange& range) const;
+    std::optional<TexelPlanes> stagingTexelPlanes(const PlaneLayout& layout, const HostRange& range) const;
     std::unique_ptr<PlaneImport> importPlanes(const PlaneLayout& layout, const HostRange& range,
         ImportCache& cache) const;
     std::shared_ptr<ImportCache> createImportCache(std::uint64_t generation) const;
