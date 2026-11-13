@@ -515,6 +515,8 @@ public:
 int main(int argc, char* argv[])
 {
     akira::CrashReport::install("akira", AKIRA_VERSION_STRING, "/switch");
+    if (std::freopen("sdmc:/switch/akira-stderr.txt", "w", stderr))
+        std::setvbuf(stderr, nullptr, _IONBF, 0);
     brls::Logger::setLogLevel(brls::LogLevel::LOG_INFO);
     akira::CrashReport::stage("settings");
     auto* settings = SettingsManager::getInstance();
