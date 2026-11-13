@@ -34,6 +34,7 @@ target_include_directories(ounce_probe PRIVATE source ${AKIRA_ROOT}/include ${PR
 target_compile_options(ounce_probe PRIVATE -Wall -Wextra -Wno-missing-field-initializers -fno-omit-frame-pointer)
 target_compile_definitions(ounce_probe PRIVATE VK_USE_PLATFORM_VI_NN)
 target_link_libraries(ounce_probe PRIVATE vulkan nx)
+target_link_options(ounce_probe PRIVATE -Wl,--wrap=abort -Wl,--wrap=__assert_func -Wl,--wrap=fatalThrow -Wl,--wrap=fatalThrowWithPolicy)
 
 nx_generate_nacp(OUTPUT ounce_probe.nacp NAME "ounce probe" AUTHOR "akira" VERSION "0.1.0")
 nx_create_nro(ounce_probe NACP ounce_probe.nacp ROMFS ${CMAKE_CURRENT_SOURCE_DIR}/romfs)

@@ -125,6 +125,10 @@ target_link_options(${PROJECT_NAME} PRIVATE ${APP_PLATFORM_LINK_OPTION})
 if (PLATFORM_SWITCH)
     target_link_options(${PROJECT_NAME} PRIVATE
         -Wl,--wrap=svcSetThreadCoreMask
+        -Wl,--wrap=abort
+        -Wl,--wrap=__assert_func
+        -Wl,--wrap=fatalThrow
+        -Wl,--wrap=fatalThrowWithPolicy
         -Wl,--wrap=getaddrinfo
         -Wl,--wrap=freeaddrinfo)
 endif()

@@ -18,6 +18,8 @@ public:
     static void install(const char* appName, const char* version, const char* directory);
     static void stage(const char* name);
     static void onException(const ThreadExceptionDump& dump);
+    static void onAbort(std::string_view kind, std::string_view detail, std::uint64_t returnAddress, std::uint64_t frame);
+    static void onResult(std::string_view kind, Result result, std::uint64_t returnAddress, std::uint64_t frame);
 
 private:
     static constexpr std::size_t MaxFrames = 32;
@@ -51,10 +53,12 @@ private:
     static std::string_view describe(std::uint32_t errorDesc);
     static void save(std::string_view text);
     static void echo(std::string_view text);
+    static void write(const char* path, std::string_view text, bool append);
 
     static inline const char* s_appName = "app";
     static inline const char* s_version = "";
     static inline const char* s_directory = "/switch";
+    static inline std::array<char, FS_MAX_PATH> s_bootPath{};
     static inline std::atomic<const char*> s_stage{"start"};
     static inline std::atomic_flag s_writing = ATOMIC_FLAG_INIT;
     static Writer s_writer;

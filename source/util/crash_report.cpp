@@ -18,11 +18,43 @@ void CrashReport::install(const char* appName, const char* version, const char* 
     s_version = version;
     s_directory = directory;
     std::set_terminate(&CrashReport::onTerminate);
+    s_bootPath.fill('\0');
+    std::format_to_n(s_bootPath.data(), s_bootPath.size() - 1, "{}/{}-boot.txt", s_directory, s_appName);
+    std::array<char, 160> line{};
+    const auto out = std::format_to_n(line.data(), line.size() - 1, "{} {} boot trace\n", s_appName, s_version);
+    write(s_bootPath.data(), {line.data(), static_cast<std::size_t>(out.size)}, false);
+    stage("install");
 }
 
 void CrashReport::stage(const char* name)
 {
     s_stage.store(name, std::memory_order_release);
+    if (!s_bootPath[0])
+        return;
+    std::array<char, 128> line{};
+    const auto out = std::format_to_n(line.data(), line.size() - 1, "{} {}\n", armGetSystemTick(), name);
+    write(s_bootPath.data(), {line.data(), std::min<std::size_t>(static_cast<std::size_t>(out.size), line.size() - 1)}, true);
+}
+
+void CrashReport::onAbort(std::string_view kind, std::string_view detail, std::uint64_t returnAddress, std::uint64_t frame)
+{
+    if (s_writing.test_and_set())
+        return;
+    Writer& writer = s_writer;
+    header(writer, kind);
+    if (!detail.empty())
+        writer.line("{}", detail);
+    backtrace(writer, returnAddress, 0, frame);
+    save(writer.text());
+    echo(writer.text());
+}
+
+void CrashReport::onResult(std::string_view kind, Result result, std::uint64_t returnAddress, std::uint64_t frame)
+{
+    std::array<char, 96> detail{};
+    const auto out = std::format_to_n(detail.data(), detail.size() - 1, "result 0x{:x} error {:04}-{:04}", result,
+        2000 + R_MODULE(result), R_DESCRIPTION(result));
+    onAbort(kind, {detail.data(), std::min<std::size_t>(static_cast<std::size_t>(out.size), detail.size() - 1)}, returnAddress, frame);
 }
 
 void CrashReport::onException(const ThreadExceptionDump& dump)
@@ -154,17 +186,26 @@ std::string_view CrashReport::describe(std::uint32_t errorDesc)
 
 void CrashReport::save(std::string_view text)
 {
+    std::array<char, FS_MAX_PATH> path{};
+    std::format_to_n(path.data(), path.size() - 1, "{}/{}-crash-{:016x}.txt", s_directory, s_appName, armGetSystemTick());
+    write(path.data(), text, false);
+}
+
+void CrashReport::write(const char* path, std::string_view text, bool append)
+{
     FsFileSystem* sdmc = fsdevGetDeviceFileSystem("sdmc");
     if (!sdmc)
         return;
-    std::array<char, FS_MAX_PATH> path{};
-    std::format_to_n(path.data(), path.size() - 1, "{}/{}-crash-{:016x}.txt", s_directory, s_appName, armGetSystemTick());
-    if (R_FAILED(fsFsCreateFile(sdmc, path.data(), 0, 0)))
-        return;
+    if (!append)
+        fsFsDeleteFile(sdmc, path);
+    fsFsCreateFile(sdmc, path, 0, 0);
     FsFile file{};
-    if (R_FAILED(fsFsOpenFile(sdmc, path.data(), FsOpenMode_Write | FsOpenMode_Append, &file)))
+    if (R_FAILED(fsFsOpenFile(sdmc, path, FsOpenMode_Write | FsOpenMode_Append, &file)))
         return;
-    fsFileWrite(&file, 0, text.data(), text.size(), FsWriteOption_Flush);
+    s64 size = 0;
+    if (append)
+        fsFileGetSize(&file, &size);
+    fsFileWrite(&file, size, text.data(), text.size(), FsWriteOption_Flush);
     fsFileClose(&file);
 }
 

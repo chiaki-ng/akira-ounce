@@ -523,8 +523,8 @@ int main(int argc, char* argv[])
     akira::CrashReport::stage("settings");
     auto* settings = SettingsManager::getInstance();
     settings->applyChiakiLogVerbosity();
-    if (settings->getEnableFileLogging())
-        akira::AppLog::open(SettingsManager::getLogFilePath());
+    akira::AppLog::open(settings->getEnableFileLogging() ? SettingsManager::getLogFilePath() : std::string("sdmc:/switch/akira.log"));
+    akira::CrashReport::stage("log open");
     brls::Logger::info("akira {} starting", AKIRA_VERSION_STRING);
 
     akira::UpdateManager::setSelfPath(argc > 0 && argv[0] ? argv[0] : "");
@@ -550,6 +550,7 @@ int main(int argc, char* argv[])
         brls::Platform::APP_LOCALE_DEFAULT = brls::LOCALE_AUTO;
     }
 
+    akira::CrashReport::stage("theme");
     initCustomTheme();
 
     akira::CrashReport::stage("borealis init");
