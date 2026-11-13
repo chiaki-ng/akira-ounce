@@ -587,6 +587,7 @@ int main(int argc, char* argv[])
     akira::CrashReport::stage("core init");
     std::optional<akira::ChiakiCore> core;
     core.emplace(*settings);
+    akira::CrashReport::stage("post core");
     if (!core->opened())
         brls::Logger::error("[CORE] running without the core: streaming, sign-in and discovery are unavailable");
     brls::Application::getWindowFocusChangedEvent()->subscribe([&core](bool focused) {
