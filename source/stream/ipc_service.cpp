@@ -22,6 +22,12 @@ void IpcStatsService::Start()
     if (m_running)
         return;
 
+    if (!envIsSyscallHinted(0x41) || !envIsSyscallHinted(0x43))
+    {
+        brls::Logger::info("IpcStatsService: not started, this loader does not allow svcAcceptSession and svcReplyAndReceive");
+        return;
+    }
+
     Result rc = ipcServerInit(&m_server, AKIRA_IPC_SERVICE_NAME, 4);
     if (R_FAILED(rc))
     {

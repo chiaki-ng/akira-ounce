@@ -15,6 +15,7 @@
 
 OUNCE_DEPS   ?= $(abspath $(CURDIR)/../native-deps-ounce/out/aarch64/pool)
 WITH_BOREALIS ?= $(abspath $(CURDIR)/../borealis-ounce)
+WITH_CORE ?= $(abspath $(CURDIR)/../libchiaki-core-ounce)
 IMAGE_HASH   := $(shell { cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)) \
                           $(sort $(wildcard $(OUNCE_DEPS)/*/BUILD-INFO)); } 2>/dev/null | shasum -a 256 | cut -c1-12)
 DOCKER_BUILD  = docker build --build-context ounce-deps="$(OUNCE_DEPS)"

@@ -31,6 +31,12 @@ std::optional<DecodeRun::Result> DecodeRun::run(const char* name, const AnnexBCl
     while (appletMainLoop() && (!unitLimit || result.submitted < *unitLimit))
     {
         padUpdate(&m_pad);
+        if (padGetButtonsDown(&m_pad) & HidNpadButton_X)
+        {
+            m_log.line("deliberate crash requested");
+            akira::CrashReport::stage("deliberate crash");
+            *static_cast<volatile int*>(nullptr) = 1;
+        }
         if (padGetButtonsDown(&m_pad) & HidNpadButton_Plus)
         {
             result.stopped = true;
