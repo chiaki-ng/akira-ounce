@@ -68,6 +68,7 @@ private:
     static constexpr std::uint8_t NalSps = 7;
     static constexpr std::uint8_t NalPps = 8;
     static constexpr std::array<std::uint8_t, 4> StartCode{0x00, 0x00, 0x00, 0x01};
+    static constexpr std::uint32_t DecoderReferenceLimit = akira::stream::HardwareDecoder::ImageCount - 3;
     static constexpr std::chrono::milliseconds SubmitTimeout{50};
     static constexpr std::chrono::milliseconds FirstFrameWait{20};
 
@@ -81,11 +82,14 @@ private:
     {
         bool idr = false;
         bool parameters_changed = false;
+        bool has_sps = false;
     };
 
     static std::vector<NalUnit> splitNalUnits(std::span<const std::uint8_t> sample);
     Keyframe scanNalUnits(std::span<const std::uint8_t> sample);
     std::vector<std::uint8_t> codecConfig() const;
+    std::vector<std::uint8_t> decoderSample(std::span<const std::uint8_t> sample) const;
+    void rememberDecoderSps();
     bool ensureHardwareDecoder(const Keyframe& keyframe);
     void emitReadyFrames(std::chrono::steady_clock::time_point decode_entry, std::chrono::nanoseconds first_wait);
 
@@ -102,6 +106,8 @@ private:
     double m_decode_us_accum = 0.0;
     uint64_t m_decode_sample_count = 0;
     uint64_t m_frames_emitted = 0;
+    uint64_t m_window_submitted = 0;
+    uint64_t m_window_failed = 0;
     double m_interval_us_accum = 0.0;
     double m_interval_dev_accum = 0.0;
     uint64_t m_interval_count = 0;
@@ -109,6 +115,7 @@ private:
 
     std::shared_ptr<akira::stream::HardwareDecoder> m_hardware;
     std::vector<std::uint8_t> m_sps;
+    std::vector<std::uint8_t> m_decoder_sps;
     std::vector<std::uint8_t> m_pps;
 
     FrameReadyCallback m_frame_ready_callback;

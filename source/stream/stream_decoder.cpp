@@ -1,10 +1,13 @@
 #include "stream/stream_decoder.hpp"
+#include "stream/h264_sps.hpp"
 
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <iterator>
 #include <optional>
 #include <ranges>
+#include <string>
 #include <borealis.hpp>
 
 StreamDecoder::StreamDecoder()
@@ -98,6 +101,11 @@ void StreamDecoder::publishStats(std::chrono::steady_clock::time_point now)
         m_stats.decoder_drops = m_drops;
     }
 
+    brls::Logger::info("StreamDecoder: last {} ms submitted {} failed {} emitted {}", elapsed_ms, m_window_submitted,
+        m_window_failed, m_frames_emitted);
+    m_window_submitted = 0;
+    m_window_failed = 0;
+
     m_window_start = now;
     m_decode_us_accum = 0.0;
     m_decode_sample_count = 0;
@@ -150,7 +158,14 @@ StreamDecoder::Keyframe StreamDecoder::scanNalUnits(std::span<const std::uint8_t
     for (const NalUnit& unit : splitNalUnits(sample))
     {
         if (unit.type == NalSps)
-            remember(m_sps, unit.bytes, "SPS");
+        {
+            keyframe.has_sps = true;
+            if (!std::ranges::equal(m_sps, unit.bytes))
+            {
+                remember(m_sps, unit.bytes, "SPS");
+                rememberDecoderSps();
+            }
+        }
         else if (unit.type == NalPps)
             remember(m_pps, unit.bytes, "PPS");
         else if (unit.type == NalIdr)
@@ -164,12 +179,47 @@ StreamDecoder::Keyframe StreamDecoder::scanNalUnits(std::span<const std::uint8_t
 std::vector<std::uint8_t> StreamDecoder::codecConfig() const
 {
     std::vector<std::uint8_t> config;
-    config.reserve(StartCode.size() * 2 + m_sps.size() + m_pps.size());
+    config.reserve(StartCode.size() * 2 + m_decoder_sps.size() + m_pps.size());
     std::ranges::copy(StartCode, std::back_inserter(config));
-    std::ranges::copy(m_sps, std::back_inserter(config));
+    std::ranges::copy(m_decoder_sps, std::back_inserter(config));
     std::ranges::copy(StartCode, std::back_inserter(config));
     std::ranges::copy(m_pps, std::back_inserter(config));
     return config;
+}
+
+void StreamDecoder::rememberDecoderSps()
+{
+    std::string hex;
+    for (const std::uint8_t byte : m_sps)
+        std::format_to(std::back_inserter(hex), "{:02x}", byte);
+    const auto sps = akira::stream::H264Sps::parse(m_sps);
+    if (!sps)
+    {
+        brls::Logger::warning("StreamDecoder: SPS {} does not parse, giving it to the decoder unchanged", hex);
+        m_decoder_sps = m_sps;
+        return;
+    }
+    m_decoder_sps = sps->forDecoder(DecoderReferenceLimit);
+    const auto given = akira::stream::H264Sps::parse(m_decoder_sps);
+    brls::Logger::info("StreamDecoder: SPS {} level {} refs {} dpb {}; decoder gets refs {} and no reordering",
+        hex, sps->levelIdc(), sps->maxNumRefFrames(),
+        sps->maxDecFrameBuffering() ? std::to_string(*sps->maxDecFrameBuffering()) : std::string("unset"),
+        given ? given->maxNumRefFrames() : 0);
+}
+
+std::vector<std::uint8_t> StreamDecoder::decoderSample(std::span<const std::uint8_t> sample) const
+{
+    std::vector<std::uint8_t> rebuilt;
+    rebuilt.reserve(sample.size() + m_decoder_sps.size());
+    for (const NalUnit& unit : splitNalUnits(sample))
+    {
+        std::ranges::copy(StartCode, std::back_inserter(rebuilt));
+        if (unit.type == NalSps)
+            std::ranges::copy(m_decoder_sps, std::back_inserter(rebuilt));
+        else
+            std::ranges::copy(unit.bytes, std::back_inserter(rebuilt));
+    }
+    return rebuilt;
 }
 
 bool StreamDecoder::ensureHardwareDecoder(const Keyframe& keyframe)
@@ -239,8 +289,12 @@ bool StreamDecoder::decode(const AVBufferHandle& data, std::size_t size)
     }
 
     const auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(decode_entry.time_since_epoch()).count();
-    if (auto submitted = m_hardware->submit(sample, timestamp, SubmitTimeout); !submitted)
+    const auto rebuilt = keyframe.has_sps ? decoderSample(sample) : std::vector<std::uint8_t>{};
+    const std::span<const std::uint8_t> submission = keyframe.has_sps ? std::span<const std::uint8_t>(rebuilt) : sample;
+    m_window_submitted++;
+    if (auto submitted = m_hardware->submit(submission, timestamp, SubmitTimeout); !submitted)
     {
+        m_window_failed++;
         brls::Logger::warning("StreamDecoder: videoDecoderSubmit failed: 0x{:x}", submitted.error());
         m_drops++;
         emitReadyFrames(decode_entry, std::chrono::nanoseconds(0));
@@ -266,5 +320,6 @@ void StreamDecoder::cleanup()
 {
     m_hardware.reset();
     m_sps.clear();
+    m_decoder_sps.clear();
     m_pps.clear();
 }
