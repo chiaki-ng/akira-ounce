@@ -1,4 +1,5 @@
 #include "views/settings_general_view.hpp"
+#include "views/custom_dns_prompt.hpp"
 
 #include <borealis/core/i18n.hpp>
 #include <algorithm>
@@ -293,24 +294,7 @@ void SettingsGeneralView::refreshCustomDnsCell() {
 }
 
 void SettingsGeneralView::promptCustomDns() {
-    brls::Application::getImeManager()->openForText(
-        [this](std::string text) {
-            auto servers = akira::net::CustomDns::parseServers(text);
-            if (!servers) {
-                brls::sync([]() {
-                    auto* dialog = new brls::Dialog("akira/settings/custom_dns_invalid"_i18n);
-                    dialog->addButton("akira/common/ok"_i18n, [dialog]() { dialog->close(); });
-                    dialog->open();
-                });
-                return;
-            }
-            settings->setCustomDnsServers(std::move(*servers));
-            settings->writeFile();
-            refreshCustomDnsCell();
-        },
-        "akira/settings/custom_dns_prompt"_i18n,
-        "akira/settings/custom_dns_placeholder"_i18n,
-        31, akira::net::CustomDns::formatServers(settings->getCustomDnsServers()), 0);
+    CustomDnsPrompt::open([this]() { refreshCustomDnsCell(); });
 }
 
 void SettingsGeneralView::promptAddSubnet() {

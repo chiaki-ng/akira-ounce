@@ -616,6 +616,8 @@
     "custom_dns_prompt": "Up to two DNS servers for PlayStation and Sony names only, e.g. 1.1.1.1, 8.8.8.8. Everything else keeps the system DNS (such as 90DNS). Leave empty to use the system DNS.",
     "custom_dns_placeholder": "1.1.1.1, 8.8.8.8",
     "custom_dns_invalid": "Enter one or two IPv4 DNS servers separated by a comma, e.g. 1.1.1.1, 8.8.8.8.",
+    "set_dns": "Set DNS for akira",
+    "custom_dns_saved": "PlayStation DNS: {}",
     "language": "Language",
     "language_desc": "Override display language. Requires app restart.",
     "lang_system": "System Default",

@@ -585,6 +585,8 @@
     "custom_dns_prompt": "最多两个 DNS 服务器，仅用于 PlayStation 和 Sony 域名，如 1.1.1.1, 8.8.8.8。其他域名仍使用系统 DNS（例如 90DNS）。留空则使用系统 DNS。",
     "custom_dns_placeholder": "1.1.1.1, 8.8.8.8",
     "custom_dns_invalid": "请输入一个或两个 IPv4 DNS 服务器，用逗号分隔，如 1.1.1.1, 8.8.8.8。",
+    "set_dns": "为 akira 设置 DNS",
+    "custom_dns_saved": "PlayStation DNS：{}",
     "language": "语言",
     "language_desc": "覆盖显示语言。需要重启应用。",
     "lang_system": "跟随系统",
