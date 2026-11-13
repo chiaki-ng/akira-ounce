@@ -10,16 +10,24 @@
 #   make crash SWITCH_IP=192.168.x.x     Pull + symbolicate the latest crash report
 #   make crash LOG=path/to/report.log    Symbolicate a crash report already on disk
 #   make test                            Run the host-side unit tests
+#   make devkit-image OUNCE_DEVKIT=dir   Build devkita64-ounce from an extracted ounce devkit
+#   make ounce-deps                      Build ../native-deps-ounce inside devkita64-ounce
 
-.PHONY: help build deploy crash test rebuild shell clean docker-image image-tag submodules backup
+.PHONY: help build deploy crash test rebuild shell clean docker-image devkit-image ounce-deps image-tag submodules backup
 
 OUNCE_DEPS   ?= $(abspath $(CURDIR)/../native-deps-ounce/out/aarch64/pool)
+OUNCE_DEVKIT ?= $(abspath $(CURDIR)/../ounce-devkit/20261113f)
+OUNCE_DEVKIT_VERSION := $(shell sed -n 's/^ounce-devkit //p' "$(OUNCE_DEVKIT)/ounce-devkit-version.txt" 2>/dev/null)
+DEVKIT_IMAGE ?= devkita64-ounce:$(OUNCE_DEVKIT_VERSION)
+NATIVE_DEPS  ?= $(abspath $(CURDIR)/../native-deps-ounce)
+SDL2_OUNCE   ?= $(abspath $(CURDIR)/../sdl2-ounce)
+OUNCE_DEPS_PACKAGES := make cmake ninja-build pkg-config python3 perl patch git ca-certificates curl jq rsync xz-utils bzip2 zstd
 WITH_BOREALIS ?= $(abspath $(CURDIR)/../borealis-ounce)
 WITH_CORE ?= $(abspath $(CURDIR)/../libchiaki-core-ounce)
 WITH_WIREGUARD ?= $(abspath $(CURDIR)/../switch-wireguard-ounce)
-IMAGE_HASH   := $(shell { cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)) \
+IMAGE_HASH   := $(shell { echo "$(DEVKIT_IMAGE)"; cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)) \
                           $(sort $(wildcard $(OUNCE_DEPS)/*/BUILD-INFO)); } 2>/dev/null | shasum -a 256 | cut -c1-12)
-DOCKER_BUILD  = docker build --build-context ounce-deps="$(OUNCE_DEPS)"
+DOCKER_BUILD  = docker build --build-context ounce-deps="$(OUNCE_DEPS)" --build-arg BASE="$(DEVKIT_IMAGE)"
 DOCKER_IMAGE ?= akira-builder:$(IMAGE_HASH)
 NRO_FILE     := $(CURDIR)/build/akira.nro
 ELF_FILE     := build/akira.elf
@@ -165,11 +173,24 @@ submodules:
 		git -C "$(CURDIR)" submodule update --init --recursive; \
 	fi
 
-docker-image: submodules
+devkit-image:
+	@test -n "$(OUNCE_DEVKIT_VERSION)" || { printf "$(RED)[x]$(NC) No ounce devkit at $(OUNCE_DEVKIT): extract one there or pass OUNCE_DEVKIT=<dir>\n"; exit 1; }
+	@docker image inspect $(DEVKIT_IMAGE) > /dev/null 2>&1 || { \
+		printf "$(GREEN)[*]$(NC) Building $(DEVKIT_IMAGE) from $(OUNCE_DEVKIT)...\n"; \
+		docker build --build-context ounce-devkit="$(OUNCE_DEVKIT)" --build-arg OUNCE_DEVKIT_VERSION="$(OUNCE_DEVKIT_VERSION)" \
+			-t $(DEVKIT_IMAGE) "$(CURDIR)/scripts/devkit"; }
+
+ounce-deps: devkit-image
+	@printf "$(GREEN)[*]$(NC) Building $(NATIVE_DEPS) in $(DEVKIT_IMAGE)...\n"
+	@docker run --rm -v "$(NATIVE_DEPS):/work" -v "$(SDL2_OUNCE):/ounce/sdl2-ounce:ro" -w /work $(DEVKIT_IMAGE) bash -c \
+		'apt-get update -qq && apt-get install -y -qq --no-install-recommends $(OUNCE_DEPS_PACKAGES) >/dev/null && \
+		git config --global --add safe.directory "*" && make build PLATFORM=ounce ARCH=aarch64'
+
+docker-image: submodules devkit-image
 	@IMAGE_EXISTS=$$(docker image inspect $(DOCKER_IMAGE) > /dev/null 2>&1 && echo yes || echo no); \
 	if [ "$$IMAGE_EXISTS" = "no" ]; then \
 		printf "$(GREEN)[*]$(NC) Building Docker image...\n"; \
-		test -d "$(OUNCE_DEPS)" || { printf "$(RED)[x]$(NC) No ounce deps at $(OUNCE_DEPS): run make build PLATFORM=ounce in native-deps-ounce\n"; exit 1; }; \
+		test -d "$(OUNCE_DEPS)" || { printf "$(RED)[x]$(NC) No ounce deps at $(OUNCE_DEPS): run make ounce-deps\n"; exit 1; }; \
 		$(DOCKER_BUILD) -t $(DOCKER_IMAGE) "$(CURDIR)"; \
 	fi
 

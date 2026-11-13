@@ -50,6 +50,21 @@ If you find a bug or have a feature request, please help out and open a PR with 
 ## How to get started
 Please read the docs at [chiaki-ng.github.io/akira](https://chiaki-ng.github.io/akira)
 
+## Building for Switch 2
+The ounce devkit is not part of this repository. Extract it next to the checkout, so that
+`../ounce-devkit/<version>/ounce-devkit-version.txt` exists, then build the devkit image and akira:
+
+```sh
+make devkit-image
+make ounce-deps
+make build
+```
+
+`make devkit-image` builds `devkita64-ounce:<version>` from `scripts/devkit/Dockerfile`, taking the extracted devkit as a
+build context rather than copying an archive. Pass `OUNCE_DEVKIT=<dir>` for a devkit elsewhere. `make build` builds the
+devkit image first when it is missing. `make ounce-deps` builds `../native-deps-ounce` in that image, with SDL 2 from
+`../sdl2-ounce`; it skips dependencies already built with the same toolchain.
+
 ## Screenshots
 
 <p align="center" width="100%">
