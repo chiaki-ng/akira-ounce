@@ -1,7 +1,9 @@
 #include "vulkan_presenter.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <ranges>
 
 #include "fullscreen_vert.h"
@@ -460,6 +462,113 @@ std::optional<std::uint32_t> VulkanPresenter::memoryTypeFrom(std::uint32_t bits)
         if (bits & (1u << i))
             return i;
     return std::nullopt;
+}
+
+bool VulkanPresenter::tryHostImport(const char* label, void* pointer, VkDeviceSize size, VkDeviceMemory* out)
+{
+    VkMemoryHostPointerPropertiesEXT properties{.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT};
+    const VkResult query = m_get_host_pointer_properties(m_device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, pointer, &properties);
+    if (query != VK_SUCCESS)
+    {
+        m_log.line("import {}: host pointer properties {}", label, static_cast<int>(query));
+        return false;
+    }
+    const auto type = memoryTypeFrom(properties.memoryTypeBits);
+    if (!type)
+    {
+        m_log.line("import {}: no memory type in bits 0x{:x}", label, properties.memoryTypeBits);
+        return false;
+    }
+    const VkImportMemoryHostPointerInfoEXT import{
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
+        .pHostPointer = pointer,
+    };
+    const VkMemoryAllocateInfo allocate{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = &import,
+        .allocationSize = size,
+        .memoryTypeIndex = *type,
+    };
+    const VkResult r = vkAllocateMemory(m_device, &allocate, nullptr, out);
+    m_log.line("import {}: bits 0x{:x} allocate {}", label, properties.memoryTypeBits, static_cast<int>(r));
+    return r == VK_SUCCESS;
+}
+
+std::optional<std::uint32_t> VulkanPresenter::hostVisibleType() const
+{
+    VkPhysicalDeviceMemoryProperties properties{};
+    vkGetPhysicalDeviceMemoryProperties(m_physical, &properties);
+    for (std::uint32_t i = 0; i < properties.memoryTypeCount; ++i)
+        if (properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+            return i;
+    return std::nullopt;
+}
+
+void VulkanPresenter::probeImportOrders()
+{
+    if (!m_host_import || !m_get_host_pointer_properties)
+        return;
+    constexpr std::size_t Size = 4 * 1024 * 1024;
+    constexpr std::size_t Alignment = 0x10000;
+    using Buffer = std::unique_ptr<void, decltype(&std::free)>;
+
+    {
+        Buffer heap(std::aligned_alloc(Alignment, Size), &std::free);
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        tryHostImport("A heap", heap.get(), Size, &memory);
+        vkFreeMemory(m_device, memory, nullptr);
+    }
+    {
+        Buffer heap(std::aligned_alloc(Alignment, Size), &std::free);
+        GsvNativeMemory native{};
+        const Result rc = gsvCreateNativeMemory(&native, heap.get(), Size);
+        m_log.line("import B heap then native: gsvCreateNativeMemory 0x{:x} attribute {}", rc, native.has_attribute);
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        if (R_SUCCEEDED(rc))
+        {
+            tryHostImport("B heap then native", heap.get(), Size, &memory);
+            vkFreeMemory(m_device, memory, nullptr);
+            gsvDestroyNativeMemory(&native);
+        }
+    }
+    {
+        Buffer heap(std::aligned_alloc(Alignment, Size), &std::free);
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        if (tryHostImport("C import then native", heap.get(), Size, &memory))
+        {
+            GsvNativeMemory native{};
+            const Result rc = gsvCreateNativeMemory(&native, heap.get(), Size);
+            m_log.line("import C import then native: gsvCreateNativeMemory 0x{:x} attribute {}", rc, native.has_attribute);
+            if (R_SUCCEEDED(rc))
+                gsvDestroyNativeMemory(&native);
+        }
+        vkFreeMemory(m_device, memory, nullptr);
+    }
+    if (const auto type = hostVisibleType())
+    {
+        const VkMemoryAllocateInfo allocate{
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = Size,
+            .memoryTypeIndex = *type,
+        };
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        void* mapped = nullptr;
+        const VkResult allocated = vkAllocateMemory(m_device, &allocate, nullptr, &memory);
+        const VkResult map = allocated == VK_SUCCESS ? vkMapMemory(m_device, memory, 0, Size, 0, &mapped) : allocated;
+        m_log.line("import D vulkan memory type {}: allocate {} map {} pointer 0x{:x}", *type, static_cast<int>(allocated),
+            static_cast<int>(map), reinterpret_cast<std::uintptr_t>(mapped));
+        if (mapped)
+        {
+            GsvNativeMemory native{};
+            const Result rc = gsvCreateNativeMemory(&native, mapped, Size);
+            m_log.line("import D vulkan memory then native: gsvCreateNativeMemory 0x{:x} attribute {}", rc, native.has_attribute);
+            if (R_SUCCEEDED(rc))
+                gsvDestroyNativeMemory(&native);
+            vkUnmapMemory(m_device, memory);
+        }
+        vkFreeMemory(m_device, memory, nullptr);
+    }
 }
 
 VulkanPresenter::SlotImport::SlotImport(VulkanPresenter& presenter, const akira::stream::HardwareFrame& frame)

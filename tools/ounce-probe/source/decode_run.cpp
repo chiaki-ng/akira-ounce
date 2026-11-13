@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "stream/hardware_decoder.hpp"
+#include "util/crash_report.hpp"
 
 DecodeRun::DecodeRun(ProbeLog& log, VulkanPresenter& presenter, PadState& pad) : m_log(log), m_presenter(presenter), m_pad(pad)
 {
@@ -51,8 +52,13 @@ std::optional<DecodeRun::Result> DecodeRun::run(const char* name, const AnnexBCl
         if (!frame)
             continue;
         if (result.decoded++ == 0)
+        {
             m_log.line("{}: first frame {}x{} slot {} after {} submits", name, (*frame)->width(), (*frame)->height(), (*frame)->slot(),
                 result.submitted);
+            akira::CrashReport::stage("import orders");
+            m_presenter.probeImportOrders();
+            akira::CrashReport::stage("h264 loop");
+        }
         decodeMsTotal += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
 
         if (m_presenter.present(*frame))

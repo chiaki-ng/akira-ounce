@@ -24,6 +24,7 @@ public:
     VulkanPresenter& operator=(const VulkanPresenter&) = delete;
 
     [[nodiscard]] bool present(const akira::stream::HardwareDecoder::Frame& frame);
+    void probeImportOrders();
 
 private:
     class SlotImport
@@ -84,6 +85,8 @@ private:
     SlotImport* importFor(const akira::stream::HardwareFrame& frame);
     void recordFrame(InFlight& slot, std::uint32_t imageIndex, SlotImport& import, const akira::stream::HardwareFrame& frame);
     std::optional<std::uint32_t> memoryTypeFrom(std::uint32_t bits) const;
+    std::optional<std::uint32_t> hostVisibleType() const;
+    bool tryHostImport(const char* label, void* pointer, VkDeviceSize size, VkDeviceMemory* out);
 
     ProbeLog& m_log;
     VkInstance m_instance = VK_NULL_HANDLE;
