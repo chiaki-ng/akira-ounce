@@ -8,7 +8,7 @@
 
 int main(int, char**)
 {
-    akira::CrashReport::install("ounce-probe", "probe", "/switch/ounce-probe");
+    akira::CrashReport::install("ounce-probe", "probe", "/switch");
     akira::CrashReport::stage("romfs");
     romfsInit();
     const bool sockets = R_SUCCEEDED(socketInitializeDefault());

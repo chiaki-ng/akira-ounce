@@ -50,6 +50,7 @@ private:
     static bool readable(std::uint64_t address, std::size_t size);
     static std::string_view describe(std::uint32_t errorDesc);
     static void save(std::string_view text);
+    static void echo(std::string_view text);
 
     static inline const char* s_appName = "app";
     static inline const char* s_version = "";

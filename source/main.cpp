@@ -518,7 +518,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-    akira::CrashReport::install("akira", AKIRA_VERSION_STRING, "/switch/akira/crash");
+    akira::CrashReport::install("akira", AKIRA_VERSION_STRING, "/switch");
     brls::Logger::setLogLevel(brls::LogLevel::LOG_INFO);
     akira::CrashReport::stage("settings");
     auto* settings = SettingsManager::getInstance();

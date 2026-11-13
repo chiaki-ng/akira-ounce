@@ -1,5 +1,6 @@
 #include "util/crash_report.hpp"
 
+#include <cstdio>
 #include <cstdlib>
 #include <exception>
 #include <typeinfo>
@@ -45,6 +46,7 @@ void CrashReport::onException(const ThreadExceptionDump& dump)
     }
     backtrace(writer, dump.pc.x, dump.lr.x, dump.fp.x);
     save(writer.text());
+    echo(writer.text());
 }
 
 void CrashReport::onTerminate()
@@ -67,6 +69,7 @@ void CrashReport::onTerminate()
         const auto pc = reinterpret_cast<std::uint64_t>(__builtin_return_address(0));
         backtrace(writer, pc, 0, fp);
         save(writer.text());
+        echo(writer.text());
     }
     std::abort();
 }
@@ -155,10 +158,7 @@ void CrashReport::save(std::string_view text)
     if (!sdmc)
         return;
     std::array<char, FS_MAX_PATH> path{};
-    std::format_to_n(path.data(), path.size() - 1, "{}", s_directory);
-    fsFsCreateDirectory(sdmc, path.data());
-    path.fill('\0');
-    std::format_to_n(path.data(), path.size() - 1, "{}/crash-{:016x}.txt", s_directory, armGetSystemTick());
+    std::format_to_n(path.data(), path.size() - 1, "{}/{}-crash-{:016x}.txt", s_directory, s_appName, armGetSystemTick());
     if (R_FAILED(fsFsCreateFile(sdmc, path.data(), 0, 0)))
         return;
     FsFile file{};
@@ -166,6 +166,12 @@ void CrashReport::save(std::string_view text)
         return;
     fsFileWrite(&file, 0, text.data(), text.size(), FsWriteOption_Flush);
     fsFileClose(&file);
+}
+
+void CrashReport::echo(std::string_view text)
+{
+    std::fwrite(text.data(), 1, text.size(), stderr);
+    std::fflush(stderr);
 }
 
 }
