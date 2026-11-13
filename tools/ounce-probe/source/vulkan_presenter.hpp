@@ -40,9 +40,13 @@ private:
         VkImage luma() const { return m_luma; }
         VkImage chroma() const { return m_chroma; }
         VkDescriptorSet set() const { return m_set; }
+        float uvScale() const { return m_uv_scale; }
 
     private:
-        VkImage createPlane(VkFormat format, std::uint32_t width, std::uint32_t height, const akira::stream::HardwarePlane& plane);
+        VkImage createPlane(VkFormat format, std::uint32_t texelSize, std::uint32_t width, std::uint32_t height,
+            const akira::stream::HardwarePlane& plane);
+        bool bindPlane(VkImage image, const akira::stream::HardwarePlane& plane, std::uint32_t texelSize, VkDeviceSize backingSize,
+            const char* name);
         VkImageView createView(VkImage image, VkFormat format);
 
         VulkanPresenter& m_presenter;
@@ -53,6 +57,7 @@ private:
         VkImageView m_chroma_view = VK_NULL_HANDLE;
         VkDescriptorSet m_set = VK_NULL_HANDLE;
         bool m_initialized = false;
+        float m_uv_scale = 1.0f;
     };
 
     struct InFlight
@@ -75,6 +80,7 @@ private:
     bool createFrames();
     void reportImportSupport();
     bool linearModifierSupported(VkFormat format);
+    bool linearHostImageSupported(VkFormat format);
     SlotImport* importFor(const akira::stream::HardwareFrame& frame);
     void recordFrame(InFlight& slot, std::uint32_t imageIndex, SlotImport& import, const akira::stream::HardwareFrame& frame);
     std::optional<std::uint32_t> memoryTypeFrom(std::uint32_t bits) const;

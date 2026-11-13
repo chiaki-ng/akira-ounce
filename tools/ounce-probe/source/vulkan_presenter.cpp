@@ -182,6 +182,33 @@ void VulkanPresenter::reportImportSupport()
     if (m_drm_modifier)
         m_log.line("linear modifier sampled+host import: R8 {} R8G8 {}", linearModifierSupported(VK_FORMAT_R8_UNORM),
             linearModifierSupported(VK_FORMAT_R8G8_UNORM));
+    m_log.line("linear tiling sampled+host import: R8 {} R8G8 {}", linearHostImageSupported(VK_FORMAT_R8_UNORM),
+        linearHostImageSupported(VK_FORMAT_R8G8_UNORM));
+}
+
+bool VulkanPresenter::linearHostImageSupported(VkFormat format)
+{
+    VkFormatProperties formatProperties{};
+    vkGetPhysicalDeviceFormatProperties(m_physical, format, &formatProperties);
+    if (!(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
+        return false;
+    const VkPhysicalDeviceExternalImageFormatInfo external{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
+    };
+    const VkPhysicalDeviceImageFormatInfo2 info{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
+        .pNext = &external,
+        .format = format,
+        .type = VK_IMAGE_TYPE_2D,
+        .tiling = VK_IMAGE_TILING_LINEAR,
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+    };
+    VkExternalImageFormatProperties externalProperties{.sType = VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES};
+    VkImageFormatProperties2 properties{.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2, .pNext = &externalProperties};
+    if (vkGetPhysicalDeviceImageFormatProperties2(m_physical, &info, &properties) != VK_SUCCESS)
+        return false;
+    return (externalProperties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT) != 0;
 }
 
 bool VulkanPresenter::linearModifierSupported(VkFormat format)
@@ -444,9 +471,9 @@ VulkanPresenter::SlotImport::SlotImport(VulkanPresenter& presenter, const akira:
     log.line("slot {}: backing 0x{:x} size {} luma off {} pitch {} chroma off {} pitch {} alignment ok {}/{}", frame.slot(), address,
         frame.backingSize(), frame.luma().offset, frame.luma().pitch, frame.chroma().offset, frame.chroma().pitch,
         address % alignment == 0, frame.backingSize() % alignment == 0);
-    if (!presenter.m_host_import || !presenter.m_drm_modifier || !presenter.m_get_host_pointer_properties)
+    if (!presenter.m_host_import || !presenter.m_get_host_pointer_properties)
     {
-        log.line("FAIL zero copy needs external_memory_host and image_drm_format_modifier");
+        log.line("FAIL zero copy needs external_memory_host");
         return;
     }
     if (address % alignment != 0 || frame.backingSize() % alignment != 0)
@@ -464,10 +491,12 @@ VulkanPresenter::SlotImport::SlotImport(VulkanPresenter& presenter, const akira:
         return;
     }
 
-    m_luma = createPlane(VK_FORMAT_R8_UNORM, frame.width(), frame.height(), frame.luma());
-    m_chroma = createPlane(VK_FORMAT_R8G8_UNORM, (frame.width() + 1) / 2, (frame.height() + 1) / 2, frame.chroma());
+    m_luma = createPlane(VK_FORMAT_R8_UNORM, 1, frame.width(), frame.height(), frame.luma());
+    m_chroma = createPlane(VK_FORMAT_R8G8_UNORM, 2, (frame.width() + 1) / 2, (frame.height() + 1) / 2, frame.chroma());
     if (!m_luma || !m_chroma)
         return;
+    if (!presenter.m_drm_modifier)
+        m_uv_scale = static_cast<float>(frame.width()) / static_cast<float>(frame.luma().pitch);
 
     VkMemoryRequirements lumaRequirements{};
     VkMemoryRequirements chromaRequirements{};
@@ -499,12 +528,9 @@ VulkanPresenter::SlotImport::SlotImport(VulkanPresenter& presenter, const akira:
         log.line("FAIL vkAllocateMemory host import {}", static_cast<int>(r));
         return;
     }
-    if (vkBindImageMemory(presenter.m_device, m_luma, m_memory, 0) != VK_SUCCESS ||
-        vkBindImageMemory(presenter.m_device, m_chroma, m_memory, 0) != VK_SUCCESS)
-    {
-        log.line("FAIL vkBindImageMemory");
+    if (!bindPlane(m_luma, frame.luma(), 1, frame.backingSize(), "luma") ||
+        !bindPlane(m_chroma, frame.chroma(), 2, frame.backingSize(), "chroma"))
         return;
-    }
     m_luma_view = createView(m_luma, VK_FORMAT_R8_UNORM);
     m_chroma_view = createView(m_chroma, VK_FORMAT_R8G8_UNORM);
 
@@ -532,7 +558,8 @@ VulkanPresenter::SlotImport::SlotImport(VulkanPresenter& presenter, const akira:
     }};
     vkUpdateDescriptorSets(presenter.m_device, static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
     m_set = set;
-    log.line("slot {}: zero-copy import OK", frame.slot());
+    log.line("slot {}: zero-copy import OK via {} (uv scale {})", frame.slot(),
+        presenter.m_drm_modifier ? "linear drm modifier images" : "linear tiled images", m_uv_scale);
 }
 
 VulkanPresenter::SlotImport::~SlotImport()
@@ -547,9 +574,77 @@ VulkanPresenter::SlotImport::~SlotImport()
     vkFreeMemory(device, m_memory, nullptr);
 }
 
-VkImage VulkanPresenter::SlotImport::createPlane(VkFormat format, std::uint32_t width, std::uint32_t height,
+bool VulkanPresenter::SlotImport::bindPlane(VkImage image, const akira::stream::HardwarePlane& plane, std::uint32_t texelSize,
+    VkDeviceSize backingSize, const char* name)
+{
+    ProbeLog& log = m_presenter.m_log;
+    const VkDevice device = m_presenter.m_device;
+    if (m_presenter.m_drm_modifier)
+    {
+        if (vkBindImageMemory(device, image, m_memory, 0) == VK_SUCCESS)
+            return true;
+        log.line("FAIL vkBindImageMemory {}", name);
+        return false;
+    }
+
+    const VkImageSubresource subresource{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
+    VkSubresourceLayout layout{};
+    vkGetImageSubresourceLayout(device, image, &subresource, &layout);
+    VkMemoryRequirements requirements{};
+    vkGetImageMemoryRequirements(device, image, &requirements);
+    log.line("{}: linear row pitch {} want {} offset {} size {} alignment {} bind at {}", name, layout.rowPitch, plane.pitch,
+        layout.offset, requirements.size, requirements.alignment, plane.offset);
+    if (layout.rowPitch != plane.pitch || layout.offset != 0)
+    {
+        log.line("FAIL {} linear layout does not match the decoder (texel size {})", name, texelSize);
+        return false;
+    }
+    if (plane.offset % std::max<VkDeviceSize>(requirements.alignment, 1) != 0 || plane.offset + requirements.size > backingSize)
+    {
+        log.line("FAIL {} plane offset {} is misaligned or runs past the backing", name, plane.offset);
+        return false;
+    }
+    if (const VkResult r = vkBindImageMemory(device, image, m_memory, plane.offset); r != VK_SUCCESS)
+    {
+        log.line("FAIL vkBindImageMemory {} at {}: {}", name, plane.offset, static_cast<int>(r));
+        return false;
+    }
+    return true;
+}
+
+VkImage VulkanPresenter::SlotImport::createPlane(VkFormat format, std::uint32_t texelSize, std::uint32_t width, std::uint32_t height,
     const akira::stream::HardwarePlane& plane)
 {
+    if (!m_presenter.m_drm_modifier)
+    {
+        const VkExternalMemoryImageCreateInfo external{
+            .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
+            .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
+        };
+        const VkImageCreateInfo info{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .pNext = &external,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = format,
+            .extent = {static_cast<std::uint32_t>(plane.pitch / texelSize), height, 1},
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_LINEAR,
+            .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+        VkImage image = VK_NULL_HANDLE;
+        if (const VkResult r = vkCreateImage(m_presenter.m_device, &info, nullptr, &image); r != VK_SUCCESS)
+        {
+            m_presenter.m_log.line("FAIL vkCreateImage {} linear {}x{} pitch {}: {}", static_cast<int>(format), info.extent.width, height,
+                plane.pitch, static_cast<int>(r));
+            return VK_NULL_HANDLE;
+        }
+        return image;
+    }
+
     const VkSubresourceLayout layout{.offset = plane.offset, .rowPitch = plane.pitch};
     const VkImageDrmFormatModifierExplicitCreateInfoEXT modifier{
         .sType = VK_STRUCTURE_TYPE_IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT,
@@ -696,7 +791,7 @@ void VulkanPresenter::recordFrame(InFlight& slot, std::uint32_t imageIndex, Slot
     vkCmdBindPipeline(slot.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
     const VkDescriptorSet set = import.set();
     vkCmdBindDescriptorSets(slot.commands, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &set, 0, nullptr);
-    const std::array<float, 4> push{1.0f, 1.0f, 0.0f, 0.0f};
+    const std::array<float, 4> push{import.uvScale(), 1.0f, 0.0f, 0.0f};
     vkCmdPushConstants(slot.commands, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push), push.data());
     vkCmdDraw(slot.commands, 3, 1, 0, 0);
     vkCmdEndRendering(slot.commands);
