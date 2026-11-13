@@ -5,6 +5,7 @@
 
 #include <borealis.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <exception>
 
@@ -85,7 +86,7 @@ auto ChiakiCore::transportSettings() noexcept -> platform::HttpTransportSettings
 {
     return platform::HttpTransportSettings{
         .transport = platform::HttpTransport::multi,
-        .multi = {.max_host_connections = 2, .max_total_connections = 6},
+        .multi = {.max_host_connections = 2, .max_total_connections = 6, .dns_cache_lifetime = std::chrono::seconds{0}},
         .pool = {.idle_handles = 2, .connections_per_handle = 1},
         .tls_handshake_blocks = true,
     };

@@ -53,13 +53,22 @@ void CustomDns::configure(std::vector<Ipv4Address> servers)
         return;
     m_servers = std::move(servers);
     m_cache.clear();
-    brls::Logger::info("[NET] custom DNS for PlayStation names {}",
-        m_servers.empty() ? std::string("off, using the system resolver") : formatServers(m_servers));
+    brls::Logger::info("[NET] PlayStation names resolve in akira through {}{}",
+        formatServers(m_servers.empty() ? std::span<const Ipv4Address>(DefaultServers) : std::span<const Ipv4Address>(m_servers)),
+        m_servers.empty() ? " (built-in)" : "");
 }
 
 std::vector<Ipv4Address> CustomDns::servers() const
 {
     std::lock_guard lock(m_mutex);
+    return m_servers;
+}
+
+std::vector<Ipv4Address> CustomDns::resolvers() const
+{
+    std::lock_guard lock(m_mutex);
+    if (m_servers.empty())
+        return {DefaultServers.begin(), DefaultServers.end()};
     return m_servers;
 }
 
@@ -98,7 +107,7 @@ std::expected<std::vector<Ipv4Address>, int> CustomDns::resolve(const std::strin
         return std::move(*hit);
 
     int error = EAI_AGAIN;
-    for (const Ipv4Address& server : servers()) {
+    for (const Ipv4Address& server : resolvers()) {
         auto answer = m_client.queryA(server, name);
         if (!answer) {
             brls::Logger::warning("[NET] custom DNS {} via {} failed: {} errno={}", name, server.toString(),
@@ -170,7 +179,7 @@ addrinfo* CustomDns::adopt(std::unique_ptr<OwnedList> list)
 
 std::optional<int> CustomDns::getaddrinfo(const char* node, const char* service, const addrinfo* hints, addrinfo** result)
 {
-    if (!result || !node || !*node || servers().empty())
+    if (!result || !node || !*node)
         return std::nullopt;
     std::string name(node);
     std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });

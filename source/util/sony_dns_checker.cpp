@@ -59,14 +59,7 @@ SonyDnsReport checkSonyDnsAtStartup()
         return report;
     }
 
-    std::vector<Ipv4Address> dnsServers = CustomDns::instance().servers();
-    if (dnsServers.empty()) {
-        for (const uint32_t serverIp : {dns1, dns2}) {
-            const auto address = Ipv4Address::fromNetworkOrder(serverIp);
-            if (!address.isUnspecified() && std::ranges::find(dnsServers, address) == dnsServers.end())
-                dnsServers.push_back(address);
-        }
-    }
+    const std::vector<Ipv4Address> dnsServers = CustomDns::instance().resolvers();
 
     for (const Ipv4Address& serverIp : dnsServers) {
         DnsServerStatus server;

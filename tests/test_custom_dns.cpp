@@ -23,3 +23,9 @@ TEST(custom_dns_leaves_other_names_to_the_system)
     CHECK(!CustomDns::isSonyHost("localhost"));
     CHECK(!CustomDns::isSonyHost(""));
 }
+
+TEST(custom_dns_has_built_in_servers)
+{
+    CHECK(CustomDns::DefaultServers[0].toString() == "1.1.1.1");
+    CHECK(CustomDns::DefaultServers[1].toString() == "8.8.8.8");
+}

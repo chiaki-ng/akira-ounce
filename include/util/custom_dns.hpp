@@ -26,6 +26,8 @@ namespace akira::net {
 class CustomDns {
 public:
     static constexpr std::size_t MaxServers = 2;
+    static constexpr std::array<Ipv4Address, 2> DefaultServers{
+        Ipv4Address::fromNetworkOrder(0x01010101), Ipv4Address::fromNetworkOrder(0x08080808)};
     static constexpr std::array<std::string_view, 4> SonyDomains{
         "playstation.com", "playstation.net", "sonyentertainmentnetwork.com", "sony.com"};
 
@@ -44,6 +46,7 @@ public:
 
     void configure(std::vector<Ipv4Address> servers);
     std::vector<Ipv4Address> servers() const;
+    std::vector<Ipv4Address> resolvers() const;
 
     std::optional<int> getaddrinfo(const char* node, const char* service, const addrinfo* hints, addrinfo** result);
     bool freeaddrinfo(addrinfo* list);
