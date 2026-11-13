@@ -195,6 +195,15 @@ static void restartDiscovery() {
     }
 }
 
+void SettingsGeneralView::scheduleSubnetsRebuild() {
+    brls::sync([this]() {
+        brls::Application::giveFocus(customDnsCell);
+        rebuildSubnetsUI();
+        if (addSubnetRow)
+            brls::Application::giveFocus(addSubnetRow);
+    });
+}
+
 void SettingsGeneralView::rebuildSubnetsUI() {
     subnetsBox->clearViews();
 
@@ -276,6 +285,7 @@ void SettingsGeneralView::rebuildSubnetsUI() {
     addLabel->setTextColor(akira::ui::active().accent);
     addRow->addView(addLabel);
     subnetsBox->addView(addRow);
+    addSubnetRow = addRow;
 }
 
 void SettingsGeneralView::initCustomDnsCell() {
@@ -318,7 +328,7 @@ void SettingsGeneralView::promptAddSubnet() {
             settings->setDiscoverySubnets(joinSubnets(subnets));
             settings->writeFile();
             restartDiscovery();
-            rebuildSubnetsUI();
+            scheduleSubnetsRebuild();
         },
         "akira/settings/discovery_subnets_prompt"_i18n,
         "akira/settings/discovery_subnets_placeholder"_i18n,
@@ -336,7 +346,7 @@ void SettingsGeneralView::removeSubnet(const std::string& value) {
     settings->setDiscoverySubnets(joinSubnets(subnets));
     settings->writeFile();
     restartDiscovery();
-    rebuildSubnetsUI();
+    scheduleSubnetsRebuild();
 }
 
 void SettingsGeneralView::initVersionUnlock() {
