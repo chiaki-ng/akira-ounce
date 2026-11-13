@@ -5,6 +5,8 @@ file(GLOB WIREGUARD_SRCS CONFIGURE_DEPENDS
     ${WIREGUARD_DIR}/src/*.c
     ${WIREGUARD_DIR}/library/crypto/*.c
 )
+list(FILTER WIREGUARD_SRCS EXCLUDE REGEX "/src/wg_thread\\.c$")
+list(APPEND WIREGUARD_SRCS ${WIREGUARD_DIR}/ounce/wg_thread.c)
 add_library(wireguard STATIC ${WIREGUARD_SRCS})
 target_include_directories(wireguard PRIVATE
     ${WIREGUARD_DIR}/include
