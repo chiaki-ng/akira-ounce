@@ -3,7 +3,6 @@
 
 ![KaiHEN](https://img.shields.io/badge/kaiHEN-0.0.4-green) [![chiaki-ng discord](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FtAMbRuwXDH%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=chiaki-ng%20discord&logo=discord&color=5865F2)](https://discord.gg/tAMbRuwXDH)
 
-
 This is still a work in progress, but It does boot and run well enough. I am still cleaning up the sub libraries before I release a build./
 
 This is compatible with 90DNS, however, in order to be able to use it while 90DNS is active, akira's cURL calls are all called with a local resolver to enable PSN functionality (autoregist via PSN).
@@ -12,6 +11,11 @@ This is compiled with libounce and is meant to be used with the [ouncebrew](http
 
 ![img](readme/Untitled-1.jpg)
 
+This is still very early and experimental and I will most likely rewrite significant portions of it.
+
+With additional thanks to XITRIX who tested PS4 PSN setup 
+
+I have tested PS5 setup and stream directly.
 ---
 
 This software was built with reference/code from:
