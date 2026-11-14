@@ -11,20 +11,20 @@
 #   make crash LOG=path/to/report.log    Symbolicate a crash report already on disk
 #   make test                            Run the host-side unit tests
 #   make devkit-image OUNCE_DEVKIT=dir   Build devkita64-ounce from an extracted ounce devkit
+#   make fetch-devkit OUNCE_DEVKIT_URL=u Download the pinned ounce devkit and check its sha256
 #   make ounce-deps                      Build ../native-deps-ounce inside devkita64-ounce
 
-.PHONY: help build deploy crash test rebuild shell clean docker-image devkit-image ounce-deps image-tag submodules backup
+.PHONY: help build deploy crash test rebuild shell clean docker-image devkit-image fetch-devkit devkit-pin ounce-deps image-tag submodules backup
 
-OUNCE_DEPS   ?= $(abspath $(CURDIR)/../native-deps-ounce/out/aarch64/pool)
-OUNCE_DEVKIT ?= $(abspath $(CURDIR)/../ounce-devkit/20261113f)
-OUNCE_DEVKIT_VERSION := $(shell sed -n 's/^ounce-devkit //p' "$(OUNCE_DEVKIT)/ounce-devkit-version.txt" 2>/dev/null)
+OUNCE_DEVKIT_VERSION := 20261113f
+OUNCE_DEVKIT_SHA256  := 6134335c80034aeaa2a769a64dc6d7266b19adcd270a8522077547512a113146
+OUNCE_DEVKIT_URL     ?=
+OUNCE_DEVKIT ?= $(if $(wildcard $(CURDIR)/../ounce-devkit/$(OUNCE_DEVKIT_VERSION)/ounce-devkit-version.txt),$(abspath $(CURDIR)/../ounce-devkit/$(OUNCE_DEVKIT_VERSION)),$(CURDIR)/.cache/ounce-devkit/$(OUNCE_DEVKIT_VERSION))
 DEVKIT_IMAGE ?= devkita64-ounce:$(OUNCE_DEVKIT_VERSION)
-NATIVE_DEPS  ?= $(abspath $(CURDIR)/../native-deps-ounce)
-SDL2_OUNCE   ?= $(abspath $(CURDIR)/../sdl2-ounce)
+NATIVE_DEPS  ?= $(CURDIR)/library/native-deps
+SDL2_OUNCE   ?= $(CURDIR)/library/sdl2
+OUNCE_DEPS   ?= $(NATIVE_DEPS)/out/aarch64/pool
 OUNCE_DEPS_PACKAGES := make cmake ninja-build pkg-config python3 perl patch git ca-certificates curl jq rsync xz-utils bzip2 zstd
-WITH_BOREALIS ?= $(abspath $(CURDIR)/../borealis-ounce)
-WITH_CORE ?= $(abspath $(CURDIR)/../libchiaki-core-ounce)
-WITH_WIREGUARD ?= $(abspath $(CURDIR)/../switch-wireguard-ounce)
 IMAGE_HASH   := $(shell { echo "$(DEVKIT_IMAGE)"; cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)) \
                           $(sort $(wildcard $(OUNCE_DEPS)/*/BUILD-INFO)); } 2>/dev/null | shasum -a 256 | cut -c1-12)
 DOCKER_BUILD  = docker build --build-context ounce-deps="$(OUNCE_DEPS)" --build-arg BASE="$(DEVKIT_IMAGE)"
@@ -174,11 +174,25 @@ test:
 submodules:
 	@if [ ! -f "$(CURDIR)/library/borealis/README.md" ]; then \
 		printf "$(GREEN)[*]$(NC) Initializing submodules...\n"; \
-		git -C "$(CURDIR)" submodule update --init --recursive; \
+		git -C "$(CURDIR)" submodule update --init; \
 	fi
 
-devkit-image:
-	@test -n "$(OUNCE_DEVKIT_VERSION)" || { printf "$(RED)[x]$(NC) No ounce devkit at $(OUNCE_DEVKIT): extract one there or pass OUNCE_DEVKIT=<dir>\n"; exit 1; }
+devkit-pin:
+	@echo $(OUNCE_DEVKIT_VERSION)
+
+fetch-devkit:
+	@if [ ! -f "$(OUNCE_DEVKIT)/ounce-devkit-version.txt" ]; then \
+		test -n "$(OUNCE_DEVKIT_URL)" || { printf "$(RED)[x]$(NC) No ounce devkit at $(OUNCE_DEVKIT): pass OUNCE_DEVKIT=<dir> or OUNCE_DEVKIT_URL=<url>\n"; exit 1; }; \
+		printf "$(GREEN)[*]$(NC) Downloading ounce devkit $(OUNCE_DEVKIT_VERSION)...\n"; \
+		mkdir -p "$(OUNCE_DEVKIT)"; \
+		curl -fsSL --retry 3 -o "$(OUNCE_DEVKIT).tar.xz" "$(OUNCE_DEVKIT_URL)"; \
+		echo "$(OUNCE_DEVKIT_SHA256)  $(OUNCE_DEVKIT).tar.xz" | shasum -a 256 -c - > /dev/null || { printf "$(RED)[x]$(NC) The ounce devkit does not match sha256 $(OUNCE_DEVKIT_SHA256)\n"; rm -f "$(OUNCE_DEVKIT).tar.xz"; exit 1; }; \
+		tar -xJf "$(OUNCE_DEVKIT).tar.xz" -C "$(OUNCE_DEVKIT)"; \
+		rm -f "$(OUNCE_DEVKIT).tar.xz"; \
+	fi
+	@grep -qx "ounce-devkit $(OUNCE_DEVKIT_VERSION)" "$(OUNCE_DEVKIT)/ounce-devkit-version.txt" || { printf "$(RED)[x]$(NC) $(OUNCE_DEVKIT) is not ounce devkit $(OUNCE_DEVKIT_VERSION)\n"; exit 1; }
+
+devkit-image: fetch-devkit
 	@docker image inspect $(DEVKIT_IMAGE) > /dev/null 2>&1 || { \
 		printf "$(GREEN)[*]$(NC) Building $(DEVKIT_IMAGE) from $(OUNCE_DEVKIT)...\n"; \
 		docker build --build-context ounce-devkit="$(OUNCE_DEVKIT)" --build-arg OUNCE_DEVKIT_VERSION="$(OUNCE_DEVKIT_VERSION)" \

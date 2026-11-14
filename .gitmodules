@@ -1,48 +1,26 @@
 [submodule "library/borealis"]
 	path = library/borealis
-	url = git@github.com:xlanor/borealis.git
-[submodule "references/wiliwili"]
-	path = references/wiliwili
-	url = https://github.com/xfangfang/wiliwili.git
-[submodule "references/chiaki-docker-switch"]
-	path = references/chiaki-docker-switch
-	url = https://github.com/xlanor/chiaki-docker-switch.git
-[submodule "references/switchfin"]
-	path = references/switchfin
-	url = https://github.com/dragonflylee/switchfin
-[submodule "references/moonlight-switch"]
-	path = references/moonlight-switch
-	url = git@github.com:XITRIX/Moonlight-Switch.git
-[submodule "references/nxmp"]
-	path = references/nxmp
-	url = git@github.com:proconsule/nxmp.git
-[submodule "references/deko3d"]
-	path = references/deko3d
-	url = git@github.com:devkitPro/deko3d.git
-[submodule "references/psn-api"]
-	path = references/psn-api
-	url = git@github.com:achievements-app/psn-api.git
+	url = https://github.com/xlanor/ouncelibs.git
+	branch = borealis
 [submodule "library/tomlplusplus"]
 	path = library/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
 [submodule "library/switch-wireguard"]
 	path = library/switch-wireguard
-	url = https://github.com/xlanor/wg-nx.git
+	url = https://github.com/xlanor/ouncelibs.git
+	branch = switch-wireguard
 [submodule "library/lwip"]
 	path = library/lwip
 	url = https://github.com/lwip-tcpip/lwip.git
-[submodule "references/FidelityFX-FSR"]
-	path = references/FidelityFX-FSR
-	url = https://github.com/atyuwen/FidelityFX-FSR
-[submodule "references/sphaira"]
-	path = references/sphaira
-	url = https://github.com/ITotalJustice/sphaira.git
-[submodule "references/pylux"]
-	path = references/pylux
-	url = https://github.com/ForWard-Technologies-LLC/Pylux.git
-[submodule "references/Pylux"]
-	path = references/Pylux
-	url = https://github.com/ForWard-Technologies-LLC/Pylux.git
 [submodule "library/libchiaki-core"]
 	path = library/libchiaki-core
-	url = git@github.com:chiaki-ng/chiaki-ng-core.git
+	url = https://github.com/chiaki-ng/chiaki-ng-core.git
+[submodule "library/native-deps"]
+	path = library/native-deps
+	url = https://github.com/xlanor/ouncelibs.git
+	branch = native-deps
+[submodule "library/sdl2"]
+	path = library/sdl2
+	url = https://github.com/xlanor/ouncelibs.git
+	branch = sdl2
+	shallow = true
