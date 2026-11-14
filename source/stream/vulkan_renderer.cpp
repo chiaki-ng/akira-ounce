@@ -216,7 +216,15 @@ VulkanRenderer::PlaneLayout VulkanRenderer::planeLayout(const akira::stream::Har
         .height = frame.height(),
         .luma = frame.luma(),
         .chroma = frame.chroma(),
+        .decoderBuffer = frame.outputBuffer(),
     };
+}
+
+std::optional<akira::stream::DecoderOutput::Device> VulkanRenderer::decoderOutputDevice() const
+{
+    if (!m_vctx || m_path != PlanePath::TexelBuffer)
+        return std::nullopt;
+    return akira::stream::DecoderOutput::Device{m_device, m_vctx->physicalDevice()};
 }
 
 VkShaderStageFlags VulkanRenderer::pushStages(Program program)
@@ -351,7 +359,7 @@ bool VulkanRenderer::queryCapabilities()
         return false;
     }
 
-    brls::Logger::info("VulkanRenderer: decoded planes are copied into uniform texel buffers each frame");
+    brls::Logger::info("VulkanRenderer: decoded planes are sampled through uniform texel buffers");
     return true;
 }
 
@@ -821,13 +829,6 @@ std::optional<VulkanRenderer::ImagePlanes> VulkanRenderer::importImagePlanes(con
 std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::stagingTexelPlanes(const PlaneLayout& layout,
     const HostRange& range) const
 {
-    if (layout.chroma.offset % 2 != 0 || layout.chroma.pitch % 2 != 0)
-    {
-        brls::Logger::error("VulkanRenderer: chroma plane offset {:#x} / pitch {} is not RG8 addressable",
-            layout.chroma.offset, layout.chroma.pitch);
-        return std::nullopt;
-    }
-
     const VkBufferCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = range.size,
@@ -863,6 +864,18 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::stagingTexelPlanes(co
     if (!succeeded(vkMapMemory(m_device, memory.get(), 0, VK_WHOLE_SIZE, 0, &mapped), "vkMapMemory (plane copy)"))
         return std::nullopt;
 
+    auto planes = texelViews(layout, buffer.get());
+    if (!planes)
+        return std::nullopt;
+    planes->memory = std::move(memory);
+    planes->buffer = std::move(buffer);
+    planes->mapped = mapped;
+    planes->size = static_cast<std::size_t>(range.size);
+    return planes;
+}
+
+std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::texelViews(const PlaneLayout& layout, VkBuffer buffer) const
+{
     const VkDeviceSize lumaAlignment = m_caps.texelOffsetAlignment;
     const VkDeviceSize chromaAlignment = std::lcm(m_caps.texelOffsetAlignment, VkDeviceSize{2});
     const VkDeviceSize lumaOffset = layout.luma.offset / lumaAlignment * lumaAlignment;
@@ -877,12 +890,12 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::stagingTexelPlanes(co
         return std::nullopt;
     }
 
-    const auto createView = [this, &buffer](VkFormat format, VkDeviceSize offset,
+    const auto createView = [this, buffer](VkFormat format, VkDeviceSize offset,
                                 VkDeviceSize size) -> std::optional<BufferView>
     {
         const VkBufferViewCreateInfo viewInfo{
             .sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-            .buffer = buffer.get(),
+            .buffer = buffer,
             .format = format,
             .offset = offset,
             .range = size,
@@ -899,8 +912,6 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::stagingTexelPlanes(co
         return std::nullopt;
 
     return TexelPlanes{
-        .memory = std::move(memory),
-        .buffer = std::move(buffer),
         .luma = std::move(*lumaView),
         .chroma = std::move(*chromaView),
         .bases = {
@@ -909,8 +920,6 @@ std::optional<VulkanRenderer::TexelPlanes> VulkanRenderer::stagingTexelPlanes(co
             static_cast<std::uint32_t>((layout.chroma.offset - chromaOffset) / 2),
             layout.chroma.pitch / 2,
         },
-        .mapped = mapped,
-        .size = static_cast<std::size_t>(range.size),
     };
 }
 
@@ -942,7 +951,13 @@ std::unique_ptr<VulkanRenderer::PlaneImport> VulkanRenderer::importPlanes(const 
         return std::make_unique<PlaneImport>(layout, std::move(*planes), *set);
     }
 
-    auto planes = stagingTexelPlanes(layout, range);
+    if (layout.chroma.offset % 2 != 0 || layout.chroma.pitch % 2 != 0)
+    {
+        brls::Logger::error("VulkanRenderer: chroma plane offset {:#x} / pitch {} is not RG8 addressable",
+            layout.chroma.offset, layout.chroma.pitch);
+        return nullptr;
+    }
+    auto planes = layout.decoderBuffer ? texelViews(layout, layout.decoderBuffer) : stagingTexelPlanes(layout, range);
     if (!planes)
         return nullptr;
     const auto set = allocateSet(cache.pool(), m_shared.texelSetLayout.get());
@@ -1380,6 +1395,16 @@ void VulkanRenderer::renderVideo()
         publishFsrSummary(m_fsr.get());
     }
 
+    {
+        const std::int64_t timestamp = frame->timestampNs();
+        if (timestamp < m_drawn_timestamp)
+        {
+            brls::Logger::warning("VulkanRenderer: drawing frame {} (slot {}) after frame {} (slot {}), {} us back in time",
+                timestamp, frame->slot(), m_drawn_timestamp, m_drawn_slot, (m_drawn_timestamp - timestamp) / 1000);
+        }
+        m_drawn_timestamp = timestamp;
+        m_drawn_slot = frame->slot();
+    }
     PlaneImport* import = acquireImport(frame);
     if (!import)
         return;
@@ -1414,6 +1439,8 @@ void VulkanRenderer::recordAcquire(PlaneImport& import)
     std::vector<VkImageMemoryBarrier2> images;
     import.appendAcquireBarriers(images);
 
+    const VkCommandBuffer upload = m_vctx->uploadCommandBuffer();
+    const bool fromDecoder = import.layout().decoderBuffer != VK_NULL_HANDLE;
     const VkMemoryBarrier2 memory{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
         .srcStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
@@ -1421,14 +1448,28 @@ void VulkanRenderer::recordAcquire(PlaneImport& import)
         .dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         .dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
     };
-    const VkDependencyInfo dependency{
+    const VkBufferMemoryBarrier2 decoderWrite{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+        .srcAccessMask = VK_ACCESS_2_NONE,
+        .dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        .dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_FOREIGN_EXT,
+        .dstQueueFamilyIndex = m_vctx->queueFamilyIndex(),
+        .buffer = import.layout().decoderBuffer,
+        .offset = 0,
+        .size = VK_WHOLE_SIZE,
+    };
+    const VkDependencyInfo acquire{
         .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
         .memoryBarrierCount = 1,
         .pMemoryBarriers = &memory,
+        .bufferMemoryBarrierCount = fromDecoder ? 1u : 0u,
+        .pBufferMemoryBarriers = fromDecoder ? &decoderWrite : nullptr,
         .imageMemoryBarrierCount = static_cast<std::uint32_t>(images.size()),
         .pImageMemoryBarriers = images.data(),
     };
-    vkCmdPipelineBarrier2(m_vctx->uploadCommandBuffer(), &dependency);
+    vkCmdPipelineBarrier2(upload, &acquire);
 }
 
 void VulkanRenderer::drawPass(VkCommandBuffer cmd, const PipelineKey& key, VkExtent2D extent, VkDescriptorSet set,
@@ -2344,6 +2385,9 @@ void VulkanRenderer::updateOverlayTexture()
     if (!m_initialized.load(std::memory_order_acquire))
         return;
 
+    if (!settleOverlay(false))
+        return;
+
     unsigned screenH = brls::Application::windowHeight;
     if (screenH == 0)
         return;
@@ -2391,16 +2435,37 @@ void VulkanRenderer::updateOverlayTexture()
     if (!renderOverlay(*target, back))
         return;
 
+    m_ovl_in_flight = OverlayInFlight{
+        .target = std::move(target),
+        .back = back,
+        .width = m_overlay_w.load(std::memory_order_relaxed),
+        .height = m_overlay_h.load(std::memory_order_relaxed),
+    };
+    m_ovl_dirty = false;
+}
+
+bool VulkanRenderer::settleOverlay(bool wait)
+{
+    if (!m_ovl_in_flight)
+        return true;
+    const VkFence fence = m_ovl_context->fence();
+    const VkResult status = wait ? vkWaitForFences(m_device, 1, &fence, VK_TRUE, std::numeric_limits<std::uint64_t>::max())
+                                 : vkGetFenceStatus(m_device, fence);
+    if (status == VK_NOT_READY || status == VK_TIMEOUT)
+        return false;
+    succeeded(status, "overlay fence");
+    succeeded(vkResetFences(m_device, 1, &fence), "vkResetFences (overlay)");
     {
         std::lock_guard lock(m_ovl_mutex);
-        if (m_ovl_target == target)
+        if (m_ovl_target == m_ovl_in_flight->target && m_stats_mode.load(std::memory_order_relaxed) != StatsOverlayMode::Off)
         {
-            m_ovl_panel_w = m_overlay_w.load(std::memory_order_relaxed);
-            m_ovl_panel_h = m_overlay_h.load(std::memory_order_relaxed);
-            m_ovl_front = back;
+            m_ovl_panel_w = m_ovl_in_flight->width;
+            m_ovl_panel_h = m_ovl_in_flight->height;
+            m_ovl_front = m_ovl_in_flight->back;
         }
     }
-    m_ovl_dirty = false;
+    m_ovl_in_flight.reset();
+    return true;
 }
 
 bool VulkanRenderer::renderOverlay(const OverlayTarget& target, int back)
@@ -2503,13 +2568,7 @@ bool VulkanRenderer::renderOverlay(const OverlayTarget& target, int back)
         std::lock_guard lock(m_vctx->queueMutex());
         result = vkQueueSubmit2(m_vctx->queue(), 1, &submit, fence);
     }
-    if (!succeeded(result, "vkQueueSubmit2 (overlay)"))
-        return false;
-
-    const bool finished = succeeded(vkWaitForFences(m_device, 1, &fence, VK_TRUE,
-        std::numeric_limits<std::uint64_t>::max()), "vkWaitForFences (overlay)");
-    succeeded(vkResetFences(m_device, 1, &fence), "vkResetFences (overlay)");
-    return finished;
+    return succeeded(result, "vkQueueSubmit2 (overlay)");
 }
 
 bool VulkanRenderer::ensureOverlayContext()
@@ -2570,6 +2629,8 @@ bool VulkanRenderer::ensureOverlayContext()
 
 void VulkanRenderer::destroyOverlayContext()
 {
+    if (m_ovl_context)
+        settleOverlay(true);
     m_ovl_context.reset();
     m_font_atlas_warm = false;
 }

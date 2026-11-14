@@ -11,6 +11,7 @@
 #include <vector>
 #include <chrono>
 #include <mutex>
+#include <optional>
 
 #include "stream/hardware_decoder.hpp"
 #include "util/av_wrappers.hpp"
@@ -29,6 +30,7 @@ public:
     StreamDecoder& operator=(const StreamDecoder&) = delete;
 
     void setFrameReadyCallback(FrameReadyCallback callback) { m_frame_ready_callback = std::move(callback); }
+    void setOutputDevice(std::optional<akira::stream::DecoderOutput::Device> device) { m_output_device = device; }
 
     bool initCodec(bool hevc, bool ps5, int width = 0, int height = 0);
 
@@ -116,6 +118,7 @@ private:
     double m_interval_mean_us = 0.0;
 
     std::shared_ptr<akira::stream::HardwareDecoder> m_hardware;
+    std::optional<akira::stream::DecoderOutput::Device> m_output_device;
     std::vector<std::uint8_t> m_sps;
     std::vector<std::uint8_t> m_decoder_sps;
     std::vector<std::uint8_t> m_pps;

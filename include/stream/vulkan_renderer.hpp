@@ -56,6 +56,7 @@ public:
     }
 
     bool captureLastFrame(std::vector<uint8_t>& rgba, int& width, int& height) override;
+    std::optional<akira::stream::DecoderOutput::Device> decoderOutputDevice() const;
 
     void setTickCallback(TickCallback cb) override { m_tick_callback = std::move(cb); }
 
@@ -126,6 +127,7 @@ private:
         std::uint32_t height = 0;
         akira::stream::HardwarePlane luma{};
         akira::stream::HardwarePlane chroma{};
+        VkBuffer decoderBuffer = VK_NULL_HANDLE;
 
         std::uint32_t chromaWidth() const { return (width + 1) / 2; }
         std::uint32_t chromaHeight() const { return (height + 1) / 2; }
@@ -138,7 +140,8 @@ private:
         {
             return backing == other.backing && backingSize == other.backingSize && width == other.width &&
                 height == other.height && luma.offset == other.luma.offset && luma.pitch == other.luma.pitch &&
-                chroma.offset == other.chroma.offset && chroma.pitch == other.chroma.pitch;
+                chroma.offset == other.chroma.offset && chroma.pitch == other.chroma.pitch &&
+                decoderBuffer == other.decoderBuffer;
         }
     };
 
@@ -395,6 +398,7 @@ private:
         VkDeviceSize size) const;
     std::optional<ImagePlanes> importImagePlanes(const PlaneLayout& layout, const HostRange& range) const;
     std::optional<TexelPlanes> stagingTexelPlanes(const PlaneLayout& layout, const HostRange& range) const;
+    std::optional<TexelPlanes> texelViews(const PlaneLayout& layout, VkBuffer buffer) const;
     std::unique_ptr<PlaneImport> importPlanes(const PlaneLayout& layout, const HostRange& range,
         ImportCache& cache) const;
     std::shared_ptr<ImportCache> createImportCache(std::uint64_t generation) const;
@@ -423,6 +427,7 @@ private:
 
     bool ensureOverlayContext();
     void destroyOverlayContext();
+    bool settleOverlay(bool wait);
     bool ensureOverlayTarget();
     bool renderOverlay(const OverlayTarget& target, int back);
     void warmFontAtlas(NVGcontext* vg);
@@ -480,6 +485,8 @@ private:
     std::uint64_t m_render_frame_count = 0;
     std::chrono::steady_clock::time_point m_render_fps_start;
     std::atomic<float> m_render_fps{0.0f};
+    std::int64_t m_drawn_timestamp = -1;
+    std::uint32_t m_drawn_slot = 0;
     bool m_render_fps_init = false;
 
     std::atomic<int> m_border_flash_frames{0};
@@ -496,6 +503,14 @@ private:
     std::mutex m_ovl_mutex;
     std::shared_ptr<OverlayTarget> m_ovl_target;
     int m_ovl_front = -1;
+    struct OverlayInFlight
+    {
+        std::shared_ptr<OverlayTarget> target;
+        int back = 0;
+        float width = 0.0f;
+        float height = 0.0f;
+    };
+    std::optional<OverlayInFlight> m_ovl_in_flight;
     float m_ovl_panel_w = 0.0f;
     float m_ovl_panel_h = 0.0f;
 

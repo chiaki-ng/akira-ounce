@@ -26,6 +26,7 @@ add_executable(ounce_probe
     source/decode_run.cpp
     source/vulkan_presenter.cpp
     ${AKIRA_ROOT}/source/stream/hardware_decoder.cpp
+    ${AKIRA_ROOT}/source/stream/decoder_output.cpp
     ${AKIRA_ROOT}/source/util/crash_report.cpp
     ${AKIRA_ROOT}/source/util/exception_hook.cpp
     ${PROBE_SHADER_HEADERS})

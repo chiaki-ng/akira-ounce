@@ -218,14 +218,15 @@ bool Session::InitVideo(int video_width, int video_height)
     }
 
     brls::Logger::info("Creating Vulkan renderer");
-    m_video_renderer = std::make_unique<VulkanRenderer>();
+    auto renderer = std::make_unique<VulkanRenderer>();
 
-    if (!m_video_renderer->initialize(video_width, video_height))
+    if (!renderer->initialize(video_width, video_height))
     {
         brls::Logger::error("Failed to initialize video renderer");
-        m_video_renderer.reset();
         return false;
     }
+    m_video_decoder->setOutputDevice(renderer->decoderOutputDevice());
+    m_video_renderer = std::move(renderer);
 
     m_video_decoder->setFrameReadyCallback([this](StreamDecoder::Frame frame) {
         presentDecodedFrame(std::move(frame));

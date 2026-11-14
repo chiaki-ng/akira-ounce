@@ -1,5 +1,6 @@
 #include "stream/stream_decoder.hpp"
 #include "stream/h264_sps.hpp"
+#include "core/settings_manager.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -103,8 +104,11 @@ void StreamDecoder::publishStats(std::chrono::steady_clock::time_point now)
         m_stats.decoder_drops = m_drops;
     }
 
-    brls::Logger::info("StreamDecoder: last {} ms submitted {} failed {} emitted {}", elapsed_ms, m_window_submitted,
-        m_window_failed, m_frames_emitted);
+    const std::uint32_t heldPeak = m_hardware ? m_hardware->takeHeldPeak() : 0;
+    const std::uint64_t reused = m_hardware ? m_hardware->reusedWhileHeld() : 0;
+    if (SettingsManager::getInstance()->getChiakiLogVerbosity() != ChiakiLogVerbosity::Normal)
+        brls::Logger::info("StreamDecoder: last {} ms submitted {} failed {} emitted {} held peak {} slots reused while held {}",
+        elapsed_ms, m_window_submitted, m_window_failed, m_frames_emitted, heldPeak, reused);
     m_window_submitted = 0;
     m_window_failed = 0;
 
@@ -238,14 +242,19 @@ bool StreamDecoder::ensureHardwareDecoder(const Keyframe& keyframe)
     const auto height = static_cast<std::uint32_t>((std::max(m_video_height, 16) + 15) & ~15);
     m_hardware.reset();
     const auto config = codecConfig();
-    auto created = akira::stream::HardwareDecoder::create({ViddecCodec_H264, width, height, config});
+    auto created = akira::stream::HardwareDecoder::create({ViddecCodec_H264, width, height, config, m_output_device});
     if (!created)
     {
         brls::Logger::error("StreamDecoder: videoDecoderCreate {}x{} failed: 0x{:x}", width, height, created.error());
         return false;
     }
     m_hardware = std::move(created).value();
+    m_hardware->setReporter([](const std::string& line) { brls::Logger::warning("HardwareDecoder: {}", line); });
     brls::Logger::info("StreamDecoder: hardware decoder ready for {}x{}", width, height);
+    if (m_hardware->zeroCopy())
+        brls::Logger::info("StreamDecoder: the decoder writes into Vulkan-imported memory, frames are sampled in place");
+    else if (const auto& failure = m_hardware->outputFailure())
+        brls::Logger::warning("StreamDecoder: zero copy unavailable at {} (0x{:x}), frames are copied", failure->step, failure->code);
     return true;
 }
 

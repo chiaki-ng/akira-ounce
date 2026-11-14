@@ -550,6 +550,10 @@ int main(int argc, char* argv[])
     akira::CrashReport::stage("theme");
     initCustomTheme();
 
+    akira::CrashReport::stage("window size");
+    if (const Result rc = nwindowSetModeDimensions(nwindowGetDefault(), 0, 0, 0, 0); R_FAILED(rc))
+        brls::Logger::warning("switch: per-mode window size refused (0x{:x}), drawing at the default window size", rc);
+
     akira::CrashReport::stage("borealis init");
     if (!brls::Application::init())
     {
