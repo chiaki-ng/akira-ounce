@@ -521,7 +521,8 @@ int main(int argc, char* argv[])
     akira::CrashReport::stage("settings");
     auto* settings = SettingsManager::getInstance();
     settings->applyChiakiLogVerbosity();
-    akira::AppLog::open(settings->getEnableFileLogging() ? SettingsManager::getLogFilePath() : std::string("sdmc:/switch/akira.log"));
+    if (settings->getEnableFileLogging())
+        akira::AppLog::open(SettingsManager::getLogFilePath());
     akira::CrashReport::stage("log open");
     brls::Logger::info("akira {} starting", AKIRA_VERSION_STRING);
 
