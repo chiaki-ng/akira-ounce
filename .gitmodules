@@ -19,8 +19,3 @@
 	path = library/native-deps
 	url = https://github.com/xlanor/ouncelibs.git
 	branch = native-deps
-[submodule "library/sdl2"]
-	path = library/sdl2
-	url = https://github.com/xlanor/ouncelibs.git
-	branch = sdl2
-	shallow = true

@@ -22,7 +22,6 @@ OUNCE_DEVKIT_URL     ?=
 OUNCE_DEVKIT ?= $(if $(wildcard $(CURDIR)/../ounce-devkit/$(OUNCE_DEVKIT_VERSION)/ounce-devkit-version.txt),$(abspath $(CURDIR)/../ounce-devkit/$(OUNCE_DEVKIT_VERSION)),$(CURDIR)/.cache/ounce-devkit/$(OUNCE_DEVKIT_VERSION))
 DEVKIT_IMAGE ?= devkita64-ounce:$(OUNCE_DEVKIT_VERSION)
 NATIVE_DEPS  ?= $(CURDIR)/library/native-deps
-SDL2_OUNCE   ?= $(CURDIR)/library/sdl2
 OUNCE_DEPS   ?= $(NATIVE_DEPS)/out/aarch64/pool
 OUNCE_DEPS_PACKAGES := make cmake ninja-build pkg-config python3 perl patch git ca-certificates curl jq rsync xz-utils bzip2 zstd
 IMAGE_HASH   := $(shell { echo "$(DEVKIT_IMAGE)"; cat "$(CURDIR)/Dockerfile" "$(CURDIR)/.dockerignore" $(sort $(wildcard $(CURDIR)/scripts/docker/*)) \
@@ -200,7 +199,7 @@ devkit-image: fetch-devkit
 
 ounce-deps: devkit-image
 	@printf "$(GREEN)[*]$(NC) Building $(NATIVE_DEPS) in $(DEVKIT_IMAGE)...\n"
-	@docker run --rm -v "$(NATIVE_DEPS):/work" -v "$(SDL2_OUNCE):/ounce/sdl2-ounce:ro" -w /work $(DEVKIT_IMAGE) bash -c \
+	@docker run --rm -v "$(CURDIR):$(CURDIR)" -v "$(NATIVE_DEPS):$(NATIVE_DEPS)" -w "$(NATIVE_DEPS)" $(DEVKIT_IMAGE) bash -c \
 		'apt-get update -qq && apt-get install -y -qq --no-install-recommends $(OUNCE_DEPS_PACKAGES) >/dev/null && \
 		git config --global --add safe.directory "*" && make build PLATFORM=ounce ARCH=aarch64'
 
