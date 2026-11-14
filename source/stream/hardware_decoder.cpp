@@ -107,7 +107,6 @@ void HardwareDecoder::closeDecoder()
     if (!m_outputs.empty())
         m_decoder.image_count = 0;
     videoDecoderClose(&m_decoder);
-    std::ranges::for_each(m_outputs, [](auto& output) { DecoderOutput::recycle(std::move(output)); });
     m_outputs.clear();
 }
 

@@ -11,46 +11,10 @@ namespace akira::stream
 std::expected<std::unique_ptr<DecoderOutput>, DecoderOutput::Failure> DecoderOutput::acquire(const Device& device,
     const GsvDecodeImagePreference& preference)
 {
-    {
-        std::lock_guard lock(sparesMutex());
-        auto& pool = spares();
-        if (const auto spare = std::ranges::find_if(pool, [&](const auto& output) { return output->fits(device, preference); });
-            spare != pool.end())
-        {
-            auto output = std::move(*spare);
-            pool.erase(spare);
-            return output;
-        }
-    }
     std::unique_ptr<DecoderOutput> output(new DecoderOutput(device, preference));
     if (auto built = output->build(); !built)
         return std::unexpected(built.error());
     return output;
-}
-
-void DecoderOutput::recycle(std::unique_ptr<DecoderOutput> output)
-{
-    if (!output)
-        return;
-    std::lock_guard lock(sparesMutex());
-    spares().push_back(std::move(output));
-}
-
-std::vector<std::unique_ptr<DecoderOutput>>& DecoderOutput::spares()
-{
-    static auto* pool = new std::vector<std::unique_ptr<DecoderOutput>>();
-    return *pool;
-}
-
-std::mutex& DecoderOutput::sparesMutex()
-{
-    static auto* mutex = new std::mutex();
-    return *mutex;
-}
-
-bool DecoderOutput::fits(const Device& device, const GsvDecodeImagePreference& preference) const
-{
-    return m_device.device == device.device && std::memcmp(&m_preference, &preference, sizeof(preference)) == 0;
 }
 
 DecoderOutput::DecoderOutput(const Device& device, const GsvDecodeImagePreference& preference)

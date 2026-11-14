@@ -8,9 +8,7 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
-#include <mutex>
 #include <string_view>
-#include <vector>
 
 namespace akira::stream
 {
@@ -32,7 +30,6 @@ public:
 
     static std::expected<std::unique_ptr<DecoderOutput>, Failure> acquire(const Device& device,
         const GsvDecodeImagePreference& preference);
-    static void recycle(std::unique_ptr<DecoderOutput> output);
 
     ~DecoderOutput();
     DecoderOutput(const DecoderOutput&) = delete;
@@ -47,9 +44,6 @@ private:
     static constexpr std::uint32_t RegisterNativeMemory = 114;
 
     explicit DecoderOutput(const Device& device, const GsvDecodeImagePreference& preference);
-    static std::vector<std::unique_ptr<DecoderOutput>>& spares();
-    static std::mutex& sparesMutex();
-    bool fits(const Device& device, const GsvDecodeImagePreference& preference) const;
     std::expected<void, Failure> build();
     std::expected<void, Failure> import();
     Result registerNative();
