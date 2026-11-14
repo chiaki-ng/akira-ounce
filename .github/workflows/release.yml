@@ -1,240 +1,85 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
-      - '*'
-      - '!docker-*'
+      - 'v*'
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          submodules: recursive
-
-      - name: Derive version and channel from tag
-        id: version
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION_MAJOR=$(grep 'set(VERSION_MAJOR' cmake/version.cmake | sed 's/[^0-9]*//g')
-          VERSION_MINOR=$(grep 'set(VERSION_MINOR' cmake/version.cmake | sed 's/[^0-9]*//g')
-          VERSION_PATCH=$(grep 'set(VERSION_PATCH' cmake/version.cmake | sed 's/[^0-9]*//g')
-          CORE="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
-
-          TAG_VERSION="${TAG#v}"
-          PRERELEASE=""
-          CHANNEL="stable"
-          if [[ "$TAG_VERSION" == *-* ]]; then
-            PRERELEASE="${TAG_VERSION#*-}"
-            CHANNEL="rc"
-          fi
-
-          if [ "${TAG_VERSION%%-*}" != "$CORE" ]; then
-            echo "::error::Tag ${TAG} core ${TAG_VERSION%%-*} does not match cmake/version.cmake ${CORE}"
-            exit 1
-          fi
-
-          echo "version=${TAG_VERSION}" >> $GITHUB_OUTPUT
-          echo "core=${CORE}" >> $GITHUB_OUTPUT
-          echo "prerelease=${PRERELEASE}" >> $GITHUB_OUTPUT
-          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
-          echo "Detected version: ${TAG_VERSION} (channel: ${CHANNEL})"
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
-
-      - name: Name the builder image
-        id: image
-        run: echo "tag=$(make -s image-tag)" >> "$GITHUB_OUTPUT"
-
-      - name: Build the builder image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          load: true
-          tags: ${{ steps.image.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build Akira
-        env:
-          BUILD_CHANNEL: ${{ steps.version.outputs.channel }}
-          VERSION_PRERELEASE: ${{ steps.version.outputs.prerelease }}
-        run: make build
-
-      - name: Upload NRO artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: akira-nro
-          path: build/akira.nro
-
-      - name: Upload ELF artifact (debug symbols)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: akira-elf
-          path: build/akira.elf
-
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      channel: ${{ steps.version.outputs.channel }}
-
-  build-companion:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact: akira-companion-linux-amd64
-            tags: webkit2_41
-          - os: macos-latest
-            artifact: akira-companion-darwin-arm64
-            tags: ''
-          - os: windows-latest
-            artifact: akira-companion-windows-amd64
-            tags: ''
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version: '1.25'
-          cache-dependency-path: apps/akira-companion/go.sum
-
-      - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '20'
-
-      - name: Install Linux WebKit dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
-
-      - name: Install Wails CLI
-        shell: bash
-        run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-
-      - name: Build companion app
-        working-directory: apps/akira-companion
-        shell: bash
-        run: |
-          if [ -n "${{ matrix.tags }}" ]; then
-            wails build -clean -tags "${{ matrix.tags }}"
-          else
-            wails build -clean
-          fi
-
-      - name: Package artifact
-        working-directory: apps/akira-companion
-        shell: bash
-        run: |
-          mkdir -p dist
-          case "$RUNNER_OS" in
-            Linux)   cp build/bin/akira-companion dist/${{ matrix.artifact }} ;;
-            Windows) cp build/bin/akira-companion.exe dist/${{ matrix.artifact }}.exe ;;
-            macOS)   ( cd build/bin && zip -r -y ../../dist/${{ matrix.artifact }}.zip akira-companion.app ) ;;
-          esac
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: apps/akira-companion/dist/*
-
   release:
-    needs: [build, build-companion]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - name: Download akira-nro artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          name: akira-nro
+          fetch-depth: 0
+          submodules: true
 
-      - name: Download akira-elf artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: akira-elf
-
-      - name: Download companion artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          pattern: akira-companion-*
-          merge-multiple: true
-
-      - name: Package NRO for SD card
+      - name: Derive the version from the tag
         run: |
-          mkdir -p switch
-          cp akira.nro switch/akira.nro
-          zip -r akira-${{ needs.build.outputs.version }}.zip switch/
-
-      - name: Generate update feed (SHA256SUMS + manifest.json)
-        run: |
-          SHA256=$(sha256sum akira.nro | cut -d' ' -f1)
-          SIZE=$(stat -c%s akira.nro)
-          echo "${SHA256}  akira.nro" > SHA256SUMS
-          NRO_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/akira.nro"
-          NOTES_URL="https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
-          cat > manifest.json <<EOF
+          TAG="${GITHUB_REF_NAME}"
+          MAJOR=$(grep 'set(VERSION_MAJOR' cmake/version.cmake | sed 's/[^0-9]*//g')
+          MINOR=$(grep 'set(VERSION_MINOR' cmake/version.cmake | sed 's/[^0-9]*//g')
+          PATCH=$(grep 'set(VERSION_PATCH' cmake/version.cmake | sed 's/[^0-9]*//g')
+          CORE="${MAJOR}.${MINOR}.${PATCH}"
+          VERSION="${TAG#v}"
+          PRERELEASE=""
+          CHANNEL="stable"
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE="${VERSION#*-}"
+            CHANNEL="rc"
+          fi
+          if [ "${VERSION%%-*}" != "$CORE" ]; then
+            echo "::error::Tag ${TAG} does not match cmake/version.cmake ${CORE}"
+            exit 1
+          fi
           {
-            "version": "${{ needs.build.outputs.version }}",
-            "channel": "${{ needs.build.outputs.channel }}",
-            "tag": "${{ github.ref_name }}",
-            "nro_url": "${NRO_URL}",
-            "sha256": "${SHA256}",
-            "size": ${SIZE},
-            "notes_url": "${NOTES_URL}"
-          }
-          EOF
-          cat manifest.json
+            echo "VERSION=${VERSION}"
+            echo "BUILD_CHANNEL=${CHANNEL}"
+            echo "VERSION_PRERELEASE=${PRERELEASE}"
+            echo "devkit=$(make -s devkit-pin)"
+          } >> "$GITHUB_ENV"
 
-      - name: Compose release body
-        run: |
-          {
-            if [ "${{ needs.build.outputs.channel }}" = "rc" ]; then
-              echo "## Read this first"
-              echo ""
-              echo "- **This is a release candidate and may contain bugs.**"
-              echo "- **Testers may wish to back up their configs before applying this release.**"
-              echo ""
-            fi
-            echo "Please read the [README](https://github.com/${{ github.repository }}#readme) and the [documentation](https://chiaki-ng.github.io/akira) before getting started."
-            echo ""
-          } > RELEASE_BODY.md
-
-      - name: Create Release
-        uses: softprops/action-gh-release@b25b93d384199fc0fc8c2e126b2d937a0cbeb2ae # v2
+      - name: Restore the ounce devkit
+        uses: actions/cache@v4
         with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            akira-${{ needs.build.outputs.version }}.zip
-            akira.nro
-            akira.elf
-            akira-companion-*
-            SHA256SUMS
-            manifest.json
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ needs.build.outputs.channel == 'rc' }}
-          body_path: RELEASE_BODY.md
+          path: .cache/ounce-devkit
+          key: ounce-devkit-${{ env.devkit }}
+
+      - name: Restore the native deps
+        uses: actions/cache@v4
+        with:
+          path: library/native-deps/out
+          key: ounce-deps-${{ env.devkit }}-${{ hashFiles('library/native-deps/config/ounce.toml', 'library/native-deps/deps/*/ounce.toml', 'library/native-deps/deps/*/patches/*', 'library/native-deps/scripts/*') }}
+
+      - name: Build the devkit image
+        run: make devkit-image
+
+      - name: Build the native deps
+        run: make ounce-deps
+
+      - name: Build akira
+        run: make build CLOUD=false
+
+      - name: Package for the SD card
+        run: |
+          mkdir -p dist/switch
+          cp build/akira.nro dist/switch/akira.nro
+          ( cd dist && zip -r "akira-ounce-${VERSION}.zip" switch )
+          cp build/akira.nro build/akira.elf dist/
+          ( cd dist && sha256sum akira.nro > SHA256SUMS )
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FLAGS=()
+          if [ "${BUILD_CHANNEL}" = "rc" ]; then FLAGS+=(--prerelease); fi
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/akira-ounce-${VERSION}.zip" dist/akira.nro dist/akira.elf dist/SHA256SUMS \
+            --title "akira-ounce ${VERSION}" --generate-notes "${FLAGS[@]}"
