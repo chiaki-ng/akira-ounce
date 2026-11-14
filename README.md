@@ -1,13 +1,13 @@
 # Akira-ounce
 
-
 ![KaiHEN](https://img.shields.io/badge/kaiHEN-0.0.4-green) [![chiaki-ng discord](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FtAMbRuwXDH%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=chiaki-ng%20discord&logo=discord&color=5865F2)](https://discord.gg/tAMbRuwXDH)
 
-This is still a work in progress, but It does boot and run well enough. I am still cleaning up the sub libraries before I release a build./
+This is still a work in progress, but It does boot and run well enough. I am still cleaning up the sub libraries before I release a build.
 
-This is compatible with 90DNS, however, in order to be able to use it while 90DNS is active, akira's cURL calls are all called with a local resolver to enable PSN functionality (autoregist via PSN).
 
-This is compiled with libounce and is meant to be used with the [ouncebrew](https://github.com/ouncebrew) project.
+This is compiled with libounce, ounceVK, and other associated tools provided by ouncebrew and is meant to be used with the [ouncebrew](https://github.com/ouncebrew) project, primarily, KaiHEN.
+
+
 
 ![img](readme/Untitled-1.jpg)
 
@@ -16,6 +16,16 @@ This is still very early and experimental and I will most likely rewrite signifi
 With additional thanks to XITRIX who tested PS4 PSN setup 
 
 I have tested PS5 setup and stream directly.
+
+**This is compatible with 90DNS, however, in order to be able to use it while 90DNS is active, In akira only, any getaddrinfo calls are wrapped to use a [custom resolver](https://github.com/chiaki-ng/akira-ounce/blob/master/source/util/custom_dns.cpp) via 1.1.1.1 and 8.8.8.8 for any [sony domains](https://github.com/chiaki-ng/akira-ounce/blob/master/include/util/custom_dns.hpp#L31-L40) only. This does NOT affect your systems 90DNS setup and is contained in the app**
+
+
+
+Additional credits to the following individuals:
+
+- [XITRIX](https://github.com/XITRIX) over from switch 1 moonlight who helped to test this on PS4
+- [aveao](github.com/aveao) who was helping with getting my env to a testable state.
+
 ---
 
 This software was built with reference/code from:
