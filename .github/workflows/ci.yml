@@ -2,12 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    branches: ['**']
+    paths-ignore:
+      - '**.md'
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -21,11 +25,7 @@ jobs:
 
       - name: Stamp the version
         run: |
-          echo "short=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           echo "BUILD_CHANNEL=dev" >> "$GITHUB_ENV"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "VERSION_PRERELEASE=pr${{ github.event.pull_request.number }}" >> "$GITHUB_ENV"
-          fi
           echo "devkit=$(make -s devkit-pin)" >> "$GITHUB_ENV"
 
       - name: Restore the ounce devkit
@@ -48,15 +48,3 @@ jobs:
 
       - name: Build akira
         run: make build CLOUD=false
-
-      - name: Upload the NRO
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: akira-ounce-nro-${{ env.short }}
-          path: build/akira.nro
-
-      - name: Upload the ELF
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: akira-ounce-elf-${{ env.short }}
-          path: build/akira.elf
