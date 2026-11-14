@@ -16,11 +16,16 @@ I have tested PS5 setup and stream directly.
 **This is compatible with 90DNS, however, in order to be able to use it while 90DNS is active, In akira only, any getaddrinfo calls are wrapped to use a [custom resolver](https://github.com/chiaki-ng/akira-ounce/blob/master/source/util/custom_dns.cpp) via 1.1.1.1 and 8.8.8.8 for any [sony domains](https://github.com/chiaki-ng/akira-ounce/blob/master/include/util/custom_dns.hpp#L31-L40) only. This does NOT affect your systems 90DNS setup and is contained in the app**
 
 
-
 Additional credits to the following individuals:
 
 - [XITRIX](https://github.com/XITRIX) over from switch 1 moonlight who helped to test this on PS4
 - [aveao](github.com/aveao) who was helping with getting my env to a testable state.
+
+
+## Issues
+
+Please come to discord to chat
+
 
 ---
 
