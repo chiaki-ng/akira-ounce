@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -75,23 +74,20 @@ jobs:
           ( cd build && zip -9 "../dist/akira-ounce-${VERSION}-debug-symbols.zip" akira.elf )
           ( cd dist && sha256sum "akira-ounce-${VERSION}.zip" akira.nro "akira-ounce-${VERSION}-debug-symbols.zip" > SHA256SUMS )
 
-      - name: Write the release notes
-        run: |
-          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-          {
-            if [ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = tag ]; then
-              git for-each-ref --format='%(contents:subject)%0a%0a%(contents:body)' "refs/tags/${GITHUB_REF_NAME}"
-              echo
-            fi
-            make -s release-notes
-          } > dist/RELEASE_NOTES.md
-
-      - name: Publish the release
+      - name: Add the build versions to the release notes
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          FLAGS=()
-          if [ "${BUILD_CHANNEL}" = "rc" ]; then FLAGS+=(--prerelease); fi
-          gh release create "${GITHUB_REF_NAME}" \
-            "dist/akira-ounce-${VERSION}.zip" dist/akira.nro "dist/akira-ounce-${VERSION}-debug-symbols.zip" dist/SHA256SUMS \
-            --title "akira-ounce ${VERSION}" --notes-file dist/RELEASE_NOTES.md "${FLAGS[@]}"
+          {
+            gh release view "${GITHUB_REF_NAME}" --json body -q .body
+            echo
+            make -s release-notes
+          } > dist/RELEASE_NOTES.md
+          gh release edit "${GITHUB_REF_NAME}" --notes-file dist/RELEASE_NOTES.md
+
+      - name: Upload the release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" --clobber \
+            "dist/akira-ounce-${VERSION}.zip" dist/akira.nro "dist/akira-ounce-${VERSION}-debug-symbols.zip" dist/SHA256SUMS
