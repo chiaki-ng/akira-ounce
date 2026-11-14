@@ -1,14 +1,14 @@
 [submodule "library/borealis"]
 	path = library/borealis
-	url = https://github.com/xlanor/ouncelibs.git
-	branch = borealis
+	url = https://github.com/xlanor/borealis-ounce.git
+	branch = main
 [submodule "library/tomlplusplus"]
 	path = library/tomlplusplus
 	url = https://github.com/marzer/tomlplusplus.git
 [submodule "library/switch-wireguard"]
 	path = library/switch-wireguard
-	url = https://github.com/xlanor/ouncelibs.git
-	branch = switch-wireguard
+	url = https://github.com/xlanor/switch-wireguard-ounce.git
+	branch = main
 [submodule "library/lwip"]
 	path = library/lwip
 	url = https://github.com/lwip-tcpip/lwip.git
@@ -17,5 +17,5 @@
 	url = https://github.com/chiaki-ng/chiaki-ng-core.git
 [submodule "library/native-deps"]
 	path = library/native-deps
-	url = https://github.com/xlanor/ouncelibs.git
-	branch = native-deps
+	url = https://github.com/xlanor/native-deps-ounce.git
+	branch = main
