@@ -1,12 +1,14 @@
 # Akira-ounce
-
+![KaiHEN](https://img.shields.io/badge/kaiHEN-0.0.4-green) [![chiaki-ng discord](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FtAMbRuwXDH%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=chiaki-ng%20discord&logo=discord&color=5865F2)](https://discord.gg/tAMbRuwXDH)
 
 ## Disclaimer ⚠️
 
 > [!WARNING]  
 > **This is an unofficial project that is not endorsed or certified by Sony Interactive Entertainment LLC.**
 
-![KaiHEN](https://img.shields.io/badge/kaiHEN-0.0.4-green) [![chiaki-ng discord](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FtAMbRuwXDH%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=chiaki-ng%20discord&logo=discord&color=5865F2)](https://discord.gg/tAMbRuwXDH)
+> [!WARNING]  
+> **Please do NOT use this on your switch 2 UNLESS you are able to accept any of the risks and/or disclaimers that the ouncebrew project has mentioned. Switch 2 CFW is in its infancy.**
+
 
 This is still a work in progress, but It does boot and run well enough. I am still cleaning up the sub libraries before I release a build.
 
