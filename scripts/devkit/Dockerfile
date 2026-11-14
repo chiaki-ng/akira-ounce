@@ -1,4 +1,4 @@
-ARG BASE=docker.io/devkitpro/toolchain-base:20250727@sha256:2a489c022aa4de3b302eff99c9088a3d4f341d114b35930f365ed79c020dca4a
+ARG BASE=ghcr.io/chiaki-ng/devkita64@sha256:3a978bfec72c624aed88b8197f3f46b7288e091f3c28f0e5697b7c211df9c969
 FROM ${BASE}
 
 ARG OUNCE_DEVKIT_VERSION
@@ -11,19 +11,11 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends glslang-tools && \
     rm -rf /var/lib/apt/lists/*
 
-RUN dkp-pacman -Syyu --noconfirm && \
-    dkp-pacman -S --needed --noconfirm \
-        devkitA64 \
-        devkita64-rules \
-        dkp-toolchain-vars \
-        devkit-env \
-        devkita64-cmake \
-        switch-cmake \
-        switch-tools \
-        general-tools && \
-    dkp-pacman -Scc --noconfirm && \
-    test ! -e "${DEVKITPRO}/libnx" && \
-    test ! -e "${DEVKITPRO}/portlibs/switch/lib"
+RUN dkp-pacman -Qq | grep -vxE 'devkitA64|devkita64-(binutils|cmake|gcc|newlib|rules)|devkit-env|devkitpro-keyring|dkp-(cmake-common-utils|meson-scripts|toolchain-vars)|general-tools|pacman|switch-(cmake|tools|pkg-config|mbedtls)|uam' | \
+        xargs dkp-pacman -Rdd --noconfirm && \
+    rm -rf "${DEVKITPRO}/libnx" "${DEVKITPRO}/examples" && \
+    test -f "${DEVKITPRO}/portlibs/switch/lib/libmbedtls.a" && \
+    test -z "$(ls "${DEVKITPRO}/portlibs/switch/lib" | grep -vE '^(libmbed(tls|x509|crypto)\.a|pkgconfig|cmake)$')"
 
 COPY --from=ounce-devkit libounce /opt/devkitpro/libounce
 COPY --from=ounce-devkit portlibs/switch2 /opt/devkitpro/portlibs/switch2

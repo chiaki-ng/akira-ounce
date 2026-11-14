@@ -4,9 +4,7 @@ FROM ${BASE}
 RUN apt-get update && apt-get install -y --no-install-recommends ninja-build jq && \
     rm -rf /var/lib/apt/lists/*
 
-RUN dkp-pacman -Sy --noconfirm && \
-    dkp-pacman -S --noconfirm --needed switch-mbedtls && \
-    dkp-pacman -Scc --noconfirm && \
+RUN test -f "${DEVKITPRO}/portlibs/switch/lib/libmbedtls.a" && \
     test "$(readlink "${DEVKITPRO}/libnx")" = libounce
 
 COPY scripts/docker /opt/akira-docker
