@@ -45,7 +45,10 @@ VulkanRenderer::PlaneImport::PlaneImport(PlaneLayout layout, std::variant<ImageP
 void VulkanRenderer::PlaneImport::copyFrom(const void* backing)
 {
     if (auto* texels = std::get_if<TexelPlanes>(&m_planes); texels && texels->mapped && backing)
+    {
+        armDCacheFlush(const_cast<void*>(backing), texels->size);
         std::memcpy(texels->mapped, backing, texels->size);
+    }
 }
 
 void VulkanRenderer::PlaneImport::appendAcquireBarriers(std::vector<VkImageMemoryBarrier2>& barriers)
