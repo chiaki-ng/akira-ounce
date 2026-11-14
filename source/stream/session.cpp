@@ -316,7 +316,7 @@ void Session::updateActualResolution(int width, int height)
         m_video_renderer->updateResolution(width, height);
 }
 
-bool Session::InitAVCodec(bool hevc, int video_width, int video_height)
+bool Session::InitAVCodec(bool hevc, bool ps5, int video_width, int video_height)
 {
     std::lock_guard lock(m_media_mutex);
     if (!m_video_decoder)
@@ -324,7 +324,7 @@ bool Session::InitAVCodec(bool hevc, int video_width, int video_height)
         m_video_decoder = std::make_unique<StreamDecoder>();
     }
 
-    return m_video_decoder->initCodec(hevc, video_width, video_height);
+    return m_video_decoder->initCodec(hevc, ps5, video_width, video_height);
 }
 
 bool Session::InitController()

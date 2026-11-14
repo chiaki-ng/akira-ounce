@@ -344,7 +344,7 @@ void StreamView::openConnection()
     session->setEnvelopeDecay(padProfile.envelope_decay);
     session->setRumbleCeiling(padProfile.ceiling);
 
-    if (!session->InitAVCodec(hevc, width, height))
+    if (!session->InitAVCodec(hevc, host->isPS5(), width, height))
         throw Exception("Failed to initiate libav codec");
     if (!session->InitVideo(width, height))
         throw Exception("Failed to initiate video");

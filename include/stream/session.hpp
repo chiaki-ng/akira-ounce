@@ -95,7 +95,7 @@ public:
     libchiaking::media::VideoResult submitVideo(const libchiaking::media::VideoUnit& unit);
     libchiaking::media::AudioResult submitAudio(const libchiaking::media::AudioUnit& unit);
     bool InitVideo(int video_width, int video_height);
-    bool InitAVCodec(bool hevc, int video_width = 0, int video_height = 0);
+    bool InitAVCodec(bool hevc, bool ps5, int video_width = 0, int video_height = 0);
     bool FreeVideo();
     bool InitController();
     bool FreeController();

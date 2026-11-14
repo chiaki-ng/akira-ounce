@@ -30,7 +30,7 @@ public:
 
     void setFrameReadyCallback(FrameReadyCallback callback) { m_frame_ready_callback = std::move(callback); }
 
-    bool initCodec(bool hevc, int width = 0, int height = 0);
+    bool initCodec(bool hevc, bool ps5, int width = 0, int height = 0);
 
     // Initialize video with frame queue
     bool initVideo(int video_width, int video_height);
@@ -68,7 +68,8 @@ private:
     static constexpr std::uint8_t NalSps = 7;
     static constexpr std::uint8_t NalPps = 8;
     static constexpr std::array<std::uint8_t, 4> StartCode{0x00, 0x00, 0x00, 0x01};
-    static constexpr std::uint32_t DecoderReferenceLimit = 3;
+    static constexpr std::uint32_t Ps4ReferenceLimit = 3;
+    static constexpr std::uint32_t Ps5ReferenceLimit = 5;
     static constexpr std::chrono::milliseconds SubmitTimeout{50};
     static constexpr std::chrono::milliseconds FirstFrameWait{20};
 
@@ -124,6 +125,7 @@ private:
     int m_video_width = 0;
     int m_video_height = 0;
     bool m_is_hevc = false;
+    std::uint32_t m_reference_limit = Ps4ReferenceLimit;
     bool m_waiting_for_idr = false;
 };
 

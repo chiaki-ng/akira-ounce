@@ -19,9 +19,10 @@ StreamDecoder::~StreamDecoder()
     cleanup();
 }
 
-bool StreamDecoder::initCodec(bool hevc, int width, int height)
+bool StreamDecoder::initCodec(bool hevc, bool ps5, int width, int height)
 {
     m_is_hevc = hevc;
+    m_reference_limit = ps5 ? Ps5ReferenceLimit : Ps4ReferenceLimit;
     m_video_width = width;
     m_video_height = height;
     if (hevc)
@@ -29,7 +30,8 @@ bool StreamDecoder::initCodec(bool hevc, int width, int height)
         brls::Logger::error("StreamDecoder: the Switch 2 hardware decoder has no HEVC support; request H.264");
         return false;
     }
-    brls::Logger::info("StreamDecoder: H.264 on the Switch 2 hardware decoder, up to {}x{}", width, height);
+    brls::Logger::info("StreamDecoder: H.264 on the Switch 2 hardware decoder, up to {}x{}, {} references for the {}",
+        width, height, m_reference_limit, ps5 ? "PS5" : "PS4");
     return true;
 }
 
@@ -202,7 +204,7 @@ void StreamDecoder::rememberDecoderSps()
         m_decoder_sps = m_sps;
         return;
     }
-    m_decoder_sps = sps->forDecoder(DecoderReferenceLimit);
+    m_decoder_sps = sps->forDecoder(m_reference_limit);
     const auto given = akira::stream::H264Sps::parse(m_decoder_sps);
     brls::Logger::info("StreamDecoder: SPS {} level {} refs {} dpb {}; decoder gets refs {} and no reordering",
         hex, sps->levelIdc(), sps->maxNumRefFrames(),
