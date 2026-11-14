@@ -14,7 +14,7 @@
 #   make fetch-devkit OUNCE_DEVKIT_URL=u Download the pinned ounce devkit and check its sha256
 #   make ounce-deps                      Build ../native-deps-ounce inside devkita64-ounce
 
-.PHONY: help build deploy crash test rebuild shell clean docker-image devkit-image fetch-devkit devkit-pin ounce-deps image-tag submodules backup
+.PHONY: help build deploy crash test rebuild shell clean docker-image devkit-image fetch-devkit devkit-pin release-notes ounce-deps image-tag submodules backup
 
 OUNCE_DEVKIT_VERSION := 20261113f
 OUNCE_DEVKIT_SHA256  := 6134335c80034aeaa2a769a64dc6d7266b19adcd270a8522077547512a113146
@@ -213,6 +213,9 @@ docker-image: submodules devkit-image
 
 image-tag:
 	@echo $(DOCKER_IMAGE)
+
+release-notes:
+	@"$(CURDIR)/scripts/release-notes.sh" "$(OUNCE_DEVKIT)" "$(DOCKER_IMAGE)" $(VERSION)
 
 build: docker-image
 	@printf "$(GREEN)[*]$(NC) Building with $(DOCKER_IMAGE)...\n"

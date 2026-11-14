@@ -71,8 +71,12 @@ jobs:
           mkdir -p dist/switch
           cp build/akira.nro dist/switch/akira.nro
           ( cd dist && zip -r "akira-ounce-${VERSION}.zip" switch )
-          cp build/akira.nro build/akira.elf dist/
-          ( cd dist && sha256sum akira.nro > SHA256SUMS )
+          cp build/akira.nro dist/akira.nro
+          ( cd build && zip -9 "../dist/akira-ounce-${VERSION}-debug-symbols.zip" akira.elf )
+          ( cd dist && sha256sum "akira-ounce-${VERSION}.zip" akira.nro "akira-ounce-${VERSION}-debug-symbols.zip" > SHA256SUMS )
+
+      - name: Write the release notes
+        run: make -s release-notes VERSION="${VERSION}" > dist/RELEASE_NOTES.md
 
       - name: Publish the release
         env:
@@ -81,5 +85,5 @@ jobs:
           FLAGS=()
           if [ "${BUILD_CHANNEL}" = "rc" ]; then FLAGS+=(--prerelease); fi
           gh release create "${GITHUB_REF_NAME}" \
-            "dist/akira-ounce-${VERSION}.zip" dist/akira.nro dist/akira.elf dist/SHA256SUMS \
-            --title "akira-ounce ${VERSION}" --generate-notes "${FLAGS[@]}"
+            "dist/akira-ounce-${VERSION}.zip" dist/akira.nro "dist/akira-ounce-${VERSION}-debug-symbols.zip" dist/SHA256SUMS \
+            --title "akira-ounce ${VERSION}" --notes-file dist/RELEASE_NOTES.md "${FLAGS[@]}"
