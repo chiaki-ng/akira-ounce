@@ -18,6 +18,7 @@ void CrashReport::install(const char* appName, const char* version, const char* 
     s_version = version;
     s_directory = directory;
     std::set_terminate(&CrashReport::onTerminate);
+    createDirectories();
     s_bootPath.fill('\0');
     std::format_to_n(s_bootPath.data(), s_bootPath.size() - 1, "{}/{}-boot.txt", s_directory, s_appName);
     std::array<char, 160> line{};
@@ -189,6 +190,23 @@ void CrashReport::save(std::string_view text)
     std::array<char, FS_MAX_PATH> path{};
     std::format_to_n(path.data(), path.size() - 1, "{}/{}-crash-{:016x}.txt", s_directory, s_appName, armGetSystemTick());
     write(path.data(), text, false);
+}
+
+void CrashReport::createDirectories()
+{
+    FsFileSystem* sdmc = fsdevGetDeviceFileSystem("sdmc");
+    if (!sdmc)
+        return;
+    const std::string_view directory{s_directory};
+    std::array<char, FS_MAX_PATH> path{};
+    for (std::size_t end = directory.find('/', 1); ; end = directory.find('/', end + 1)) {
+        const std::string_view prefix = directory.substr(0, end);
+        path.fill('\0');
+        std::ranges::copy(prefix.substr(0, path.size() - 1), path.begin());
+        fsFsCreateDirectory(sdmc, path.data());
+        if (end == std::string_view::npos)
+            break;
+    }
 }
 
 void CrashReport::write(const char* path, std::string_view text, bool append)

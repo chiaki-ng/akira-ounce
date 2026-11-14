@@ -53,6 +53,7 @@ private:
     static std::string_view describe(std::uint32_t errorDesc);
     static void save(std::string_view text);
     static void echo(std::string_view text);
+    static void createDirectories();
     static void write(const char* path, std::string_view text, bool append);
 
     static inline const char* s_appName = "app";
