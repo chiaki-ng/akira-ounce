@@ -215,7 +215,7 @@ image-tag:
 	@echo $(DOCKER_IMAGE)
 
 release-notes:
-	@"$(CURDIR)/scripts/release-notes.sh" "$(OUNCE_DEVKIT)" "$(DOCKER_IMAGE)" $(VERSION)
+	@"$(CURDIR)/scripts/release-notes.sh" "$(OUNCE_DEVKIT)" "$(DOCKER_IMAGE)"
 
 build: docker-image
 	@printf "$(GREEN)[*]$(NC) Building with $(DOCKER_IMAGE)...\n"

@@ -4,13 +4,6 @@ set -euo pipefail
 DEVKIT="$1"
 IMAGE="$2"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${3:-$(for part in MAJOR MINOR PATCH; do grep "set(VERSION_${part}" "${ROOT}/cmake/version.cmake" | sed 's/[^0-9]*//g'; done | paste -sd. -)}"
-NOTES="${ROOT}/release-notes/${VERSION%%-*}.md"
-
-if [ -f "$NOTES" ]; then
-    cat "$NOTES"
-    echo
-fi
 
 echo "## Built from"
 echo
