@@ -4,16 +4,12 @@
 
 This is still a work in progress, but It does boot and run well enough. I am still cleaning up the sub libraries before I release a build.
 
-
-This is compiled with libounce, ounceVK, and other associated tools provided by ouncebrew and is meant to be used with the [ouncebrew](https://github.com/ouncebrew) project, primarily, KaiHEN.
-
+This is compiled with libounce, OunceVK, and other associated tools provided by ouncebrew and is meant to be used with the [ouncebrew](https://github.com/ouncebrew) project, primarily, KaiHEN.
 
 
 ![img](readme/Untitled-1.jpg)
 
 This is still very early and experimental and I will most likely rewrite significant portions of it.
-
-With additional thanks to XITRIX who tested PS4 PSN setup 
 
 I have tested PS5 setup and stream directly.
 
