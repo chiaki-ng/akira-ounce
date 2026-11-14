@@ -18,7 +18,7 @@
 
 OUNCE_DEVKIT_VERSION := 20261113f
 OUNCE_DEVKIT_SHA256  := 6134335c80034aeaa2a769a64dc6d7266b19adcd270a8522077547512a113146
-OUNCE_DEVKIT_URL     ?=
+OUNCE_DEVKIT_URL     ?= https://github.com/ouncebrew/ounce-devkit/releases/download/devkit-$(OUNCE_DEVKIT_VERSION)/ounce-devkit-$(OUNCE_DEVKIT_VERSION).tar.xz
 OUNCE_DEVKIT ?= $(if $(wildcard $(CURDIR)/../ounce-devkit/$(OUNCE_DEVKIT_VERSION)/ounce-devkit-version.txt),$(abspath $(CURDIR)/../ounce-devkit/$(OUNCE_DEVKIT_VERSION)),$(CURDIR)/.cache/ounce-devkit/$(OUNCE_DEVKIT_VERSION))
 DEVKIT_IMAGE ?= devkita64-ounce:$(OUNCE_DEVKIT_VERSION)
 NATIVE_DEPS  ?= $(CURDIR)/library/native-deps
