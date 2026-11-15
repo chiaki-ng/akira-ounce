@@ -1,6 +1,7 @@
 #ifndef AKIRA_VULKAN_RENDERER_HPP
 #define AKIRA_VULKAN_RENDERER_HPP
 
+#include "stream/hardware_decoder.hpp"
 #include "stream/video_renderer.hpp"
 
 #include <vulkan/vulkan.h>
@@ -36,8 +37,10 @@ public:
 
     bool initialize(int frame_width, int frame_height) override;
     bool isInitialized() const override { return m_initialized.load(std::memory_order_acquire); }
-    void draw(Frame frame) override;
-    void presentFrame(Frame frame) override;
+    using Frame = akira::stream::HardwareDecoder::Frame;
+
+    void draw(Frame frame);
+    void presentFrame(Frame frame);
     void cleanup() override;
     void waitIdle() override;
 

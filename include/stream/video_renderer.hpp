@@ -8,7 +8,6 @@
 #include <cstdint>
 #include "stream/stream_stats.hpp"
 
-#include "stream/hardware_decoder.hpp"
 
 // Abstract interface for video rendering
 // Implementations: OpenGLRenderer, Deko3dRenderer
@@ -20,12 +19,6 @@ public:
     virtual bool initialize(int frame_width, int frame_height) = 0;
 
     virtual bool isInitialized() const = 0;
-
-    using Frame = akira::stream::HardwareDecoder::Frame;
-
-    virtual void draw(Frame frame) = 0;
-
-    virtual void presentFrame(Frame frame) { draw(std::move(frame)); }
 
     virtual void cleanup() = 0;
 

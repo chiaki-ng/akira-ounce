@@ -15,15 +15,16 @@
 
 #include "stream/hardware_decoder.hpp"
 #include "util/av_wrappers.hpp"
+#include "video/decoder.hpp"
 
-class StreamDecoder
+class StreamDecoder final : public akira::video::Decoder
 {
 public:
     using Frame = akira::stream::HardwareDecoder::Frame;
     using FrameReadyCallback = std::function<void(Frame)>;
 
     StreamDecoder();
-    ~StreamDecoder();
+    ~StreamDecoder() override;
 
     // Disable copy
     StreamDecoder(const StreamDecoder&) = delete;
@@ -32,37 +33,31 @@ public:
     void setFrameReadyCallback(FrameReadyCallback callback) { m_frame_ready_callback = std::move(callback); }
     void setOutputDevice(std::optional<akira::stream::DecoderOutput::Device> device) { m_output_device = device; }
 
-    bool initCodec(bool hevc, bool ps5, int width = 0, int height = 0);
+    bool initCodec(bool hevc, bool ps5, int width, int height) override;
 
     // Initialize video with frame queue
-    bool initVideo(int video_width, int video_height);
+    bool initVideo(int video_width, int video_height) override;
 
     // Decode a video packet (returns false if waiting for keyframe)
-    bool decode(const AVBufferHandle& data, std::size_t size);
+    bool decode(const AVBufferHandle& data, std::size_t size) override;
 
     // Flush decoder buffers and set waiting-for-keyframe state
-    void flush();
+    void flush() override;
 
     // Cleanup
-    void cleanup();
+    void cleanup() override;
 
-    int getVideoWidth() const { return m_video_width; }
-    int getVideoHeight() const { return m_video_height; }
-    void updateResolution(int width, int height) { m_video_width = width; m_video_height = height; }
-    bool isHEVC() const { return m_is_hevc; }
-    bool isHardwareAccelerated() const { return true; }
+    int getVideoWidth() const override { return m_video_width; }
+    int getVideoHeight() const override { return m_video_height; }
+    void updateResolution(int width, int height) override { m_video_width = width; m_video_height = height; }
+    bool isHEVC() const override { return m_is_hevc; }
+    bool isHardwareAccelerated() const override { return true; }
 
-    struct DecoderStats
-    {
-        float decode_ms = 0.0f;
-        float source_fps = 0.0f;
-        float jitter_ms = 0.0f;
-        uint64_t decoder_drops = 0;
-    };
+    using DecoderStats = akira::video::Decoder::Stats;
 
-    DecoderStats getStats() const;
-    std::chrono::steady_clock::time_point lastEmitTime() const { return m_last_emit; }
-    bool lastDecodeCorrupt() const { return false; }
+    DecoderStats getStats() const override;
+    std::chrono::steady_clock::time_point lastEmitTime() const override { return m_last_emit; }
+    bool lastDecodeCorrupt() const override { return false; }
 
 private:
     static constexpr std::uint8_t NalSlice = 1;
