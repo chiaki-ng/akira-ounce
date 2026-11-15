@@ -15,6 +15,11 @@ SettingsPowerUserView::SettingsPowerUserView() {
     settings = SettingsManager::getInstance();
 
     initUnlockBitrateMaxToggle();
+#if AKIRA_PLATFORM_NX
+    initIpcStatsToggle();
+#else
+    ipcStatsToggle->setVisibility(brls::Visibility::GONE);
+#endif
     initPortGuessingToggle();
     initPortGuessingCountSlider();
     initPortGuessingSocksSlider();
@@ -46,6 +51,20 @@ void SettingsPowerUserView::initUnlockBitrateMaxToggle() {
     );
 }
 
+#if AKIRA_PLATFORM_NX
+void SettingsPowerUserView::initIpcStatsToggle() {
+    ipcStatsToggle->init(
+        "akira/settings/ipc_stats"_i18n,
+        settings->getIpcStatsEnabled(),
+        [this](bool isOn) {
+            settings->setIpcStatsEnabled(isOn);
+            settings->writeFile();
+            brls::Logger::info("IPC Stats set to {}", isOn ? "true" : "false");
+        }
+    );
+}
+
+#endif
 void SettingsPowerUserView::initHideAccountNameToggle() {
     hideAccountNameToggle->init(
         "akira/settings/hide_account_name"_i18n,

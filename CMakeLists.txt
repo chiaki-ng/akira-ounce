@@ -52,6 +52,7 @@ if (NOT AKIRA_CLOUD)
     list(FILTER MAIN_SRC EXCLUDE REGEX "/source/views/cloud_shortcuts_rail\\.cpp$")
 endif()
 include(video_provider)
+include(platform)
 
 # Switch wrapper for libnx initialization
 list(APPEND MAIN_SRC ${BOREALIS_LIBRARY}/lib/platforms/switch/switch_wrapper.c)
@@ -86,6 +87,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/library/qrcodegen
     # Generated version header (configure_file in cmake/version.cmake)
     ${CMAKE_BINARY_DIR}/generated
+    ${CMAKE_CURRENT_SOURCE_DIR}/overlay/common/include
     # Borealis includes
     ${BOREALIS_LIBRARY}/include
     # WireGuard
@@ -107,6 +109,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 option(MUTE_CHIAKI_LOGS "Drop every core log line" OFF)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_MUTE_CORE_LOGS=$<BOOL:${MUTE_CHIAKI_LOGS}>)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_CLOUD=$<BOOL:${AKIRA_CLOUD}>)
+target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_PLATFORM_NX=$<BOOL:${AKIRA_PLATFORM_NX}> AKIRA_PLATFORM_OUNCE=$<BOOL:${AKIRA_PLATFORM_OUNCE}>)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_PS5_CLOUD_LAUNCH=$<BOOL:${AKIRA_PS5_CLOUD_LAUNCH}>)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_PS4_CLOUD_LAUNCH=$<BOOL:${AKIRA_PS4_CLOUD_LAUNCH}>)
 

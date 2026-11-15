@@ -13,6 +13,7 @@ public:
 
 private:
     BRLS_BIND(brls::BooleanCell, unlockBitrateMaxToggle, "settings/unlockBitrateMax");
+    BRLS_BIND(brls::BooleanCell, ipcStatsToggle, "settings/ipcStats");
     BRLS_BIND(brls::BooleanCell, portGuessingToggle, "settings/portGuessing");
     BRLS_BIND(brls::SliderCell, portGuessingCountSlider, "settings/portGuessingCount");
     BRLS_BIND(brls::SliderCell, portGuessingSocksSlider, "settings/portGuessingSocks");
@@ -24,6 +25,9 @@ private:
     SettingsManager* settings = nullptr;
 
     void initUnlockBitrateMaxToggle();
+#if AKIRA_PLATFORM_NX
+    void initIpcStatsToggle();
+#endif
     void initAutoReconnectToggle();
     void initHideAccountNameToggle();
     void initPortGuessingToggle();

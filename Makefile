@@ -162,7 +162,7 @@ test:
 	fi
 	@mkdir -p "$(CURDIR)/build/tests"
 	@printf "$(GREEN)[*]$(NC) Building host tests...\n"
-	@c++ -std=c++23 -g -O0 -Wall -Wextra -Wno-unused-parameter \
+	@c++ -std=c++23 -g -O0 -Wall -Wextra -Wno-unused-parameter -DAKIRA_PLATFORM_NX=0 -DAKIRA_PLATFORM_OUNCE=1 \
 		-I"$(CURDIR)/include" -I"$(CURDIR)/tests" -I"$(JSONC_PREFIX)/include" -I"$(SIMDUTF_PREFIX)/include" \
 		-I"$(CURDIR)/library/tomlplusplus/include" -I"$(CORE_DIR)/include" -I"$(CORE_DIR)" -I"$(OPENSSL_PREFIX)/include" \
 		$(TEST_SRC) $(CORE_TEST_SRC) -L"$(JSONC_PREFIX)/lib" -ljson-c -L"$(SIMDUTF_PREFIX)/lib" -lsimdutf \

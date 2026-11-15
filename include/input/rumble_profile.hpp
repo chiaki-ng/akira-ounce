@@ -1,6 +1,14 @@
 #ifndef AKIRA_INPUT_RUMBLE_PROFILE_HPP
 #define AKIRA_INPUT_RUMBLE_PROFILE_HPP
 
+#if AKIRA_PLATFORM_NX
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
+#include "input/ps_output.hpp"
+#endif
+
 namespace akira::input {
 
 
@@ -8,8 +16,60 @@ inline constexpr const char* kRumbleKeyDefault = "default";
 
 inline constexpr const char* kRumbleKeySwitch = "switch";
 
+#if AKIRA_PLATFORM_NX
+enum class PadCategory {
+    DualSense = 0,
+    JoyCon,
+    SwitchPro,
+    Generic,
+};
+
+inline constexpr const char* kRumbleKeyDualSense = "dualsense";
+#endif
 inline constexpr const char* kRumbleKeyJoyCon    = "joycon";
 inline constexpr const char* kRumbleKeySwitchPro = "switchpro";
+#if AKIRA_PLATFORM_NX
+inline constexpr const char* kRumbleKeyGeneric   = "generic";
+
+inline const char* RumbleKeyForCategory(PadCategory category)
+{
+    switch (category) {
+        case PadCategory::DualSense: return kRumbleKeyDualSense;
+        case PadCategory::JoyCon:    return kRumbleKeyJoyCon;
+        case PadCategory::SwitchPro: return kRumbleKeySwitchPro;
+        case PadCategory::Generic:   return kRumbleKeyGeneric;
+    }
+    return kRumbleKeyGeneric;
+}
+
+inline PadCategory PadCategoryFor(std::uint16_t vendor_id, std::uint16_t product_id,
+                                  bool switch_native, bool joycon)
+{
+    if (switch_native)
+        return joycon ? PadCategory::JoyCon : PadCategory::SwitchPro;
+
+    if (PadTakesDirectOutput(vendor_id, product_id))
+        return PadCategory::DualSense;
+
+    return PadCategory::Generic;
+}
+
+inline const char* PadCategoryName(PadCategory category)
+{
+    switch (category) {
+        case PadCategory::DualSense: return "DualSense";
+        case PadCategory::JoyCon:    return "Joy-Con";
+        case PadCategory::SwitchPro: return "Switch Pro";
+        case PadCategory::Generic:   return "Other controllers";
+    }
+    return "Other controllers";
+}
+
+enum class PadOutputMode {
+    Native = 0,
+    Basic,
+};
+#endif
 
 enum class RumbleSource {
     Off = 0,
@@ -40,7 +100,19 @@ struct RumbleProfile {
 
     HapticIntensity haptic_intensity = HapticIntensity::Normal;
 
+#if AKIRA_PLATFORM_NX
+    PadOutputMode output_mode = PadOutputMode::Native;
+
+
+#endif
     RumbleSource rumble_source = RumbleSource::Derived;
+#if AKIRA_PLATFORM_NX
+
+    bool          lightbar_enabled = false;
+    std::uint8_t  lightbar_r = 0x00;
+    std::uint8_t  lightbar_g = 0x80;
+    std::uint8_t  lightbar_b = 0xff;
+#endif
 };
 
 inline RumbleProfile DefaultRumbleProfile()
@@ -63,6 +135,31 @@ inline RumbleProfile SwitchRumbleProfile()
     return p;
 }
 
+#if AKIRA_PLATFORM_NX
+std::string RumbleKeyForModel(std::uint16_t vendor_id, std::uint16_t product_id);
+
+std::string RumbleKeyForUnit(const std::uint8_t* address);
+
+bool RumbleKeyIsUnit(const std::string& key);
+bool RumbleKeyIsModel(const std::string& key);
+bool RumbleKeyIsCategory(const std::string& key);
+
+struct HapticRumble {
+    bool          emit  = false;
+    std::uint16_t left  = 0;
+    std::uint16_t right = 0;
+
+    std::uint32_t raw_left  = 0;
+    std::uint32_t raw_right = 0;
+};
+
+inline constexpr std::uint32_t kHapticNoiseFloor = 100;
+
+inline constexpr std::uint16_t kHapticMotorFloor = 3u << 8;
+
+inline constexpr int kHapticBlockFloor = 0;
+#endif
+
 inline float HapticSampleGain(HapticIntensity intensity)
 {
     switch (intensity) {
@@ -83,6 +180,11 @@ inline int HapticBaseForIntensity(HapticIntensity intensity)
         return 400;
     return (int)(50.0f / gain);
 }
+
+#if AKIRA_PLATFORM_NX
+HapticRumble HapticAudioToRumble(const std::int16_t* stereo, std::size_t frames,
+                                 HapticIntensity intensity, bool motor_stalls = true);
+#endif
 
 } // namespace akira::input
 
