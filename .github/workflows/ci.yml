@@ -5,18 +5,84 @@ on:
     branches: ['**']
     paths-ignore:
       - '**.md'
+  pull_request:
+    branches: [master, 'release/**']
 
-permissions:
-  contents: read
+permissions: read-all
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-nx:
     runs-on: ubuntu-latest
+
     steps:
+      - name: Set short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Stamp the version
+        run: |
+          echo "BUILD_CHANNEL=dev" >> "$GITHUB_ENV"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "VERSION_PRERELEASE=pr${{ github.event.pull_request.number }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Name the builder image
+        id: image
+        run: echo "tag=$(make -s image-tag-nx)" >> "$GITHUB_OUTPUT"
+
+      - name: Build the builder image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: docker/nx/Dockerfile
+          load: true
+          tags: ${{ steps.image.outputs.tag }}
+          cache-from: type=gha,scope=nx
+          cache-to: type=gha,mode=max,scope=nx
+
+      - name: Build Akira
+        run: make build-nx CLOUD=false
+
+      - name: Upload NRO artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: akira-nx-nro-${{ steps.sha.outputs.short }}
+          path: build/nx/akira.nro
+
+      - name: Upload ELF artifact (debug symbols)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: akira-nx-elf-${{ steps.sha.outputs.short }}
+          path: build/nx/akira.elf
+
+  build-ounce:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -27,6 +93,9 @@ jobs:
         run: |
           echo "BUILD_CHANNEL=dev" >> "$GITHUB_ENV"
           echo "devkit=$(make -s devkit-pin)" >> "$GITHUB_ENV"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "VERSION_PRERELEASE=pr${{ github.event.pull_request.number }}" >> "$GITHUB_ENV"
+          fi
 
       - name: Restore the ounce devkit
         uses: actions/cache@v4
@@ -47,4 +116,119 @@ jobs:
         run: make ounce-deps
 
       - name: Build akira
-        run: make build CLOUD=false
+        run: make build-ounce CLOUD=false
+
+      - name: Upload NRO artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: akira-ounce-nro-${{ steps.sha.outputs.short }}
+          path: build/ounce/akira.nro
+
+      - name: Upload ELF artifact (debug symbols)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: akira-ounce-elf-${{ steps.sha.outputs.short }}
+          path: build/ounce/akira.elf
+
+  build-companion:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artifact: akira-companion-linux-amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact: akira-companion-darwin-arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact: akira-companion-windows-amd64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: apps/akira-companion/go.sum
+
+      - name: Build companion app
+        working-directory: apps/akira-companion
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: go build -ldflags="-s -w" -o ${{ matrix.artifact }} .
+
+      - name: Set short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}-${{ steps.sha.outputs.short }}
+          path: apps/akira-companion/${{ matrix.artifact }}
+
+  comment:
+    if: github.event_name == 'pull_request'
+    needs: [build-nx, build-ounce, build-companion]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Post artifact links to PR
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const sha = context.sha.slice(0, 7);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `### Build artifacts`,
+              ``,
+              `Build succeeded for \`${sha}\`. Download artifacts from the [workflow run](${runUrl}).`,
+              ``,
+              `| Artifact | Description |`,
+              `|----------|-------------|`,
+              `| \`akira-nx-nro-${sha}\` | NRO for Switch |`,
+              `| \`akira-nx-elf-${sha}\` | ELF with debug symbols for Switch |`,
+              `| \`akira-ounce-nro-${sha}\` | NRO for Switch 2 |`,
+              `| \`akira-ounce-elf-${sha}\` | ELF with debug symbols for Switch 2 |`,
+              `| \`akira-companion-linux-amd64-${sha}\` | Companion (Linux) |`,
+              `| \`akira-companion-darwin-arm64-${sha}\` | Companion (macOS) |`,
+              `| \`akira-companion-windows-amd64.exe-${sha}\` | Companion (Windows) |`,
+            ].join('\n');
+
+            // Find existing bot comment to update instead of spamming
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('### Build artifacts')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

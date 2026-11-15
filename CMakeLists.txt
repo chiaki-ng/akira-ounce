@@ -1,14 +1,39 @@
 cmake_minimum_required(VERSION 3.13)
 
+set(AKIRA_PLATFORM "nx" CACHE STRING "Target console: nx or ounce")
+set_property(CACHE AKIRA_PLATFORM PROPERTY STRINGS nx ounce)
+if (NOT AKIRA_PLATFORM MATCHES "^(nx|ounce)$")
+    message(FATAL_ERROR "AKIRA_PLATFORM must be nx or ounce, not ${AKIRA_PLATFORM}")
+endif()
+
 # Force Switch platform
 set(PLATFORM_SWITCH ON CACHE BOOL "Build for Nintendo Switch" FORCE)
-set(PLATFORM_SWITCH2 ON CACHE BOOL "Build for Switch 2 with libounce" FORCE)
+if (AKIRA_PLATFORM STREQUAL "ounce")
+    set(PLATFORM_SWITCH2 ON CACHE BOOL "Build for Switch 2 with libounce" FORCE)
+else()
+    set(PLATFORM_SWITCH2 OFF CACHE BOOL "Build for Switch 2 with libounce" FORCE)
+endif()
 
 # Borealis paths
-set(BOREALIS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/library/borealis CACHE PATH "Borealis source tree")
+if (PLATFORM_SWITCH2)
+    set(AKIRA_LIBRARY_SUFFIX "-ounce")
+else()
+    set(AKIRA_LIBRARY_SUFFIX "")
+endif()
+
+set(BOREALIS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/library/borealis${AKIRA_LIBRARY_SUFFIX} CACHE PATH "Borealis source tree")
 set(BOREALIS_LIBRARY ${BOREALIS_DIR}/library)
 
-set(USE_VULKAN ON CACHE BOOL "Use Vulkan for rendering" FORCE)
+if (PLATFORM_SWITCH2)
+    set(USE_VULKAN ON CACHE BOOL "Use Vulkan for rendering" FORCE)
+    set(USE_DEKO3D OFF CACHE BOOL "Use deko3d for video rendering" FORCE)
+else()
+    # Use deko3d for video rendering (must be set BEFORE commonOption.cmake)
+    set(USE_DEKO3D ON CACHE BOOL "Use deko3d for video rendering" FORCE)
+    set(USE_VULKAN OFF CACHE BOOL "Use Vulkan for rendering" FORCE)
+endif()
+
+option(DEBUG_DEKO3D_RENDERING "Enable debug squares in video shader" OFF)
 
 # Platform common options + toolchain from borealis
 include(${BOREALIS_LIBRARY}/cmake/commonOption.cmake)
@@ -87,6 +112,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/library/qrcodegen
     # Generated version header (configure_file in cmake/version.cmake)
     ${CMAKE_BINARY_DIR}/generated
+    # Shared IPC definitions
     ${CMAKE_CURRENT_SOURCE_DIR}/overlay/common/include
     # Borealis includes
     ${BOREALIS_LIBRARY}/include
@@ -106,6 +132,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     ${APP_PLATFORM_OPTION}
 )
 
+if (USE_DEKO3D)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE BOREALIS_USE_DEKO3D)
+endif()
+
 option(MUTE_CHIAKI_LOGS "Drop every core log line" OFF)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_MUTE_CORE_LOGS=$<BOOL:${MUTE_CHIAKI_LOGS}>)
 target_compile_definitions(${PROJECT_NAME} PRIVATE AKIRA_CLOUD=$<BOOL:${AKIRA_CLOUD}>)
@@ -123,15 +153,22 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     libchiaking_simdutf
     CURL::libcurl
     tomlplusplus::tomlplusplus
-    PkgConfig::SDL2
+    ${SDL2_LIB}
     PkgConfig::FFMPEG
-    PkgConfig::JSONC
+    ${DAV1D_LIB}
+    ${JSONC_LIB}
     wireguard
     ${APP_PLATFORM_LIB}
 )
 
+# deko3d shader compilation + uam runtime link
 if (AKIRA_VIDEO_DEKO3D)
     include(deko3d_shaders)
+endif()
+
+# SDL2 depends on EGL/OpenGL libraries on Switch
+if (AKIRA_PLATFORM_NX)
+    target_link_libraries(${PROJECT_NAME} PRIVATE EGL glapi drm_nouveau)
 endif()
 
 target_link_options(${PROJECT_NAME} PRIVATE ${APP_PLATFORM_LINK_OPTION})
