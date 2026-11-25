@@ -34,6 +34,9 @@ Akira comes with the following features that are carried over from the switch 1 
 - PSN Trophy fetching
 - Button remapping, touchpad remapping if you're lazy.
 - In-game diagnostic menus.
+- Hardware h264 decode with SW HEVC decode
+- PSN registration by QR code, registration by legacy base64 profile, or via the companion app (to be deprecated)
+- Lan discovery / manual discovery
 
 Akira has been tested by Red_Night to run well on fw 13.6 and by me to run well on latest.
 
