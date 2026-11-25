@@ -19,7 +19,19 @@ This is compiled with libounce, OunceVK, and other associated tools provided by 
 **This is compatible with 90DNS, however, in order to be able to use it while 90DNS is active, In akira only, any getaddrinfo calls are wrapped to use a [custom resolver](https://github.com/chiaki-ng/akira-ounce/blob/master/source/util/custom_dns.cpp) via 1.1.1.1 and 8.8.8.8 for any [sony domains](https://github.com/chiaki-ng/akira-ounce/blob/master/include/util/custom_dns.hpp#L31-L40) only. This does NOT affect your systems 90DNS setup and is contained in the app**
 
 
-![img](readme/Untitled-1.jpg)
+<p align="center" width="100%">
+  <img src="readme/ounce/akira-light-dark.png" width="98%" alt="Akira home screen split down the middle into the light and dark themes, with a PS5 console card, the recently played rail, and the IP, DNS and PSN reachability details">
+</p>
+
+<p align="center" width="100%">
+  <img src="readme/ounce/akira-ingame-diagnostics.png" width="49%" alt="Akira streaming Grand Theft Auto VI with the full diagnostics overlay showing network, assembly, decode, render and display stats">
+  <img src="readme/ounce/akira-loading.png" width="49%" alt="Starting a stream of Grand Theft Auto VI over the game's key art">
+</p>
+
+<p align="center" width="100%">
+  <img src="readme/ounce/akira-button-mapping.png" width="49%" alt="Button mapping settings with every PlayStation button labelled around a DualSense diagram">
+  <img src="readme/ounce/akira-trophies.png" width="49%" alt="Trophy overview with the account trophy level, grade totals and per-game progress">
+</p>
 
 This is still very early and experimental and I will most likely rewrite significant portions of it.
 
