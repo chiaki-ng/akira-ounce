@@ -13,6 +13,11 @@ echo "| akira-ounce | \`$(git -C "$ROOT" rev-parse HEAD)\` |"
 while read -r name rest; do
     [ -n "$name" ] && echo "| ${name} | \`${rest}\` |"
 done < "${DEVKIT}/ounce-devkit-version.txt"
+pinned() { sed -n "s/^ARG $1=//p" "${ROOT}/scripts/devkit/Dockerfile"; }
+echo "| devkita64 base | \`$(pinned BASE | sed 's/.*@//')\` |"
+echo "| drako3d | \`$(pinned DRAKO3D_COMMIT)\` |"
+echo "| drakotools | \`$(pinned DRAKOTOOLS_COMMIT)\` |"
+echo "| uam2 | \`$(pinned UAM2_COMMIT)\` |"
 echo
 
 echo "## Submodules"
