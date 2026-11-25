@@ -9,14 +9,7 @@
 > [!WARNING]  
 > **Please do NOT use this on your switch 2 UNLESS you are able to accept any of the risks and/or disclaimers that the ouncebrew project has mentioned. Switch 2 CFW is in its infancy.**
 
-
-This is still a work in progress, but It does boot and run well enough. I am still cleaning up the sub libraries before I release a build.
-
-This is compiled with libounce, OunceVK, and other associated tools provided by ouncebrew and is meant to be used with the [ouncebrew](https://github.com/ouncebrew) project, primarily, KaiHEN.
-
 ### You MUST own a PS4/5 to use this. 
-
-**This is compatible with 90DNS, however, in order to be able to use it while 90DNS is active, In akira only, any getaddrinfo calls are wrapped to use a [custom resolver](https://github.com/chiaki-ng/akira-ounce/blob/master/source/util/custom_dns.cpp) via 1.1.1.1 and 8.8.8.8 for any [sony domains](https://github.com/chiaki-ng/akira-ounce/blob/master/include/util/custom_dns.hpp#L31-L40) only. This does NOT affect your systems 90DNS setup and is contained in the app**
 
 
 <p align="center" width="100%">
@@ -33,21 +26,33 @@ This is compiled with libounce, OunceVK, and other associated tools provided by 
   <img src="readme/ounce/akira-trophies.png" width="49%" alt="Trophy overview with the account trophy level, grade totals and per-game progress">
 </p>
 
-This is still very early and experimental and I will most likely rewrite significant portions of it.
+Akira comes with the following features that are carried over from the switch 1 build
 
-I have tested PS5 setup and stream directly.
+- Support for launching directly to a recently played game
+- FSR 1.0, with tunable RCAS and dithering values
+- Upscale up to 4k (at your own performance penalty)
+- PSN Trophy fetching
+- Button remapping, touchpad remapping if you're lazy.
+- In-game diagnostic menus.
+
+Akira has been tested by Red_Night to run well on fw 13.6 and by me to run well on latest.
+
+If you cannot connect, please drop the takion version and pin it to a lower version.
 
 Additional credits to the following individuals:
 
 - [XITRIX](https://github.com/XITRIX) over from switch 1 moonlight who helped to test this on PS4
 - [aveao](https://github.com/aveao) who was helping with getting my env to a testable state.
 - [ouncebrew](https://github.com/ouncebrew) for providing a homebrew development environment.
+- [ouncebrew](https://github.com/ouncebrew/drako3d) PalindromicBreadLoaf and souldbminer for drako3d, together with the underlying work on deko3d done by finCS
+- [uam2](https://github.com/ouncebrew/uam2) uam2, for providing shader compilation
+
 
 ## Issues
 
 Issues are disabled as homebrew users usually turn up to report unreproducible issues which cannot be diagnosed without having a proper conversation, but they don't ever come back to help solve those issues
 
-Please come to discord to chat if you have an issue
+Please come to discord to chat if you have an issue. The link is above. Please provide logs
 
 ---
 
