@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::trophies::ui {
 
@@ -43,9 +44,9 @@ auto TrophyModel::errorKey(accounts::Status status) -> const char*
 auto TrophyModel::waitShown(int seconds) -> std::string
 {
     if (seconds < 60)
-        return std::format("{}s", seconds);
+        return akira::text::format("{}s", seconds);
     if (seconds < 3600)
-        return std::format("{}m", (seconds + 59) / 60);
+        return akira::text::format("{}m", (seconds + 59) / 60);
     int hours = seconds / 3600;
     int minutes = ((seconds % 3600) + 59) / 60;
     if (minutes == 60)
@@ -53,7 +54,7 @@ auto TrophyModel::waitShown(int seconds) -> std::string
         ++hours;
         minutes = 0;
     }
-    return minutes > 0 ? std::format("{}h {}m", hours, minutes) : std::format("{}h", hours);
+    return minutes > 0 ? akira::text::format("{}h {}m", hours, minutes) : akira::text::format("{}h", hours);
 }
 
 auto TrophyModel::waitText(int seconds) const -> std::string
@@ -422,7 +423,7 @@ auto TrophyModel::rarityText(const Trophy& trophy) const -> std::string
     const double rate = trophy.earned_rate.value_or(0.0);
     if (rate <= 0.0)
         return name;
-    return std::format("{}  ·  {:.1f}%", name, rate);
+    return akira::text::format("{}  ·  {:.1f}%", name, rate);
 }
 
 auto TrophyModel::earnedText(const Trophy& trophy) const -> std::string
@@ -431,7 +432,7 @@ auto TrophyModel::earnedText(const Trophy& trophy) const -> std::string
         return {};
     if (!trophy.earned_at)
         return strings.text("akira/trophies/earned");
-    return std::format("{}  {:%F}", strings.text("akira/trophies/earned"),
+    return akira::text::format("{}  {:%F}", strings.text("akira/trophies/earned"),
         std::chrono::floor<std::chrono::days>(*trophy.earned_at));
 }
 

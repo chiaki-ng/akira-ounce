@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "play/controller_settings.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::settings::ui {
 
@@ -155,11 +156,11 @@ auto PadPage::shaping(const SettingRows& rows, const PadBench::Pad& pad, const p
         shown.push_back(rows.slider(rows.text("akira/settings/rumble_strength"), "", unit(0.0, 1.0), 0.01,
             read(&play::RumbleProfile::strength),
             [change](double value) { change([value](play::RumbleProfile& p) { p.strength = static_cast<float>(value); }); },
-            std::format("{:.2f}", profile.strength)));
+            akira::text::format("{:.2f}", profile.strength)));
         shown.push_back(rows.slider(rows.text("akira/settings/rumble_ceiling"), "", unit(0.0, 1.0), 0.01,
             read(&play::RumbleProfile::ceiling),
             [change](double value) { change([value](play::RumbleProfile& p) { p.ceiling = static_cast<float>(value); }); },
-            std::format("{:.2f}", profile.ceiling)));
+            akira::text::format("{:.2f}", profile.ceiling)));
         if (!profile.per_motor && !pad.direct)
         {
             shown.push_back(rows.slider(rows.text("akira/settings/rumble_low_freq"), "", unit(40.0, 320.0), 5.0,

@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::accounts::ui {
 
@@ -23,7 +24,7 @@ AccountModel::~AccountModel()
 auto AccountModel::countdown(int seconds) -> std::string
 {
     const int shown = std::max(seconds, 0);
-    return std::format("{}:{:02}", shown / 60, shown % 60);
+    return akira::text::format("{}:{:02}", shown / 60, shown % 60);
 }
 
 auto AccountModel::secretKey(AccountDesk::Secret secret) -> const char*

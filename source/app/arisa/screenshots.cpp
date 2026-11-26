@@ -17,6 +17,7 @@
 #include "app/screenshot.hpp"
 #include "log/log.hpp"
 #include "play/switch_button.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::app::arisa {
 
@@ -107,7 +108,7 @@ void Screenshots::take()
     std::expected<provider::Image, provider::ProviderError> captured = gpu.capture();
     if (!captured)
     {
-        save(std::unexpected(std::format("capture refused: {}", captured.error().explanation())));
+        save(std::unexpected(akira::text::format("capture refused: {}", captured.error().explanation())));
         return;
     }
     const std::span<const std::byte> pixels = captured->pixels();

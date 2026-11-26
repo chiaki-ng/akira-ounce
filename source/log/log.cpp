@@ -4,6 +4,8 @@
 #include <ctime>
 #include <exception>
 
+#include "util/text_format.hpp"
+
 namespace akira::log {
 
 Log::Subscription::Subscription(Log& owner, std::uint64_t id) noexcept
@@ -184,7 +186,7 @@ auto Log::formatLine(Clock::time_point time, Level level, std::string_view messa
     const std::time_t seconds = Clock::to_time_t(time);
     std::tm local{};
     localtime_r(&seconds, &local);
-    return std::format("{:02}:{:02}:{:02}.{:03}\033{}[{}]\033[0m {}\n",
+    return akira::text::format("{:02}:{:02}:{:02}.{:03}\033{}[{}]\033[0m {}\n",
         local.tm_hour, local.tm_min, local.tm_sec, static_cast<int>(ms), colour(level), label(level), message);
 }
 

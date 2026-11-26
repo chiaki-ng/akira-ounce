@@ -3,6 +3,8 @@
 #include <format>
 #include <string>
 
+#include "util/text_format.hpp"
+
 namespace akira::cloud {
 
 bool Game::awaitsRelease(int64_t nowMs) const
@@ -26,9 +28,9 @@ std::optional<int64_t> Game::unlockAfter(int64_t nowMs) const
 std::string Game::countdown(int64_t seconds)
 {
     const int64_t total = seconds < 0 ? 0 : seconds;
-    const std::string clock = std::format("{:02}:{:02}:{:02}", total % 86400 / 3600, total % 3600 / 60, total % 60);
+    const std::string clock = akira::text::format("{:02}:{:02}:{:02}", total % 86400 / 3600, total % 3600 / 60, total % 60);
     const int64_t days = total / 86400;
-    return days == 0 ? clock : std::format("{}d {}", days, clock);
+    return days == 0 ? clock : akira::text::format("{}d {}", days, clock);
 }
 
 std::string Game::artworkUrl() const

@@ -7,6 +7,7 @@
 #include "network/wireguard_manager.hpp"
 #include "log/log.hpp"
 #include "app/crash_report.hpp"
+#include "util/text_format.hpp"
 
 #include <ctime>
 #include <format>
@@ -351,7 +352,7 @@ void DiscoveryManager::applyView(uint64_t generation, const SeenNetwork& seen)
         std::lock_guard<std::mutex> lock(sweepMutex);
         sweep.sweepActive = !seen.unicastRanges.empty();
         sweep.subnets = seen.unicastRanges;
-        sweep.currentTarget = seen.targets > 0 ? std::format("{}/{}", seen.visited, seen.targets) : std::string{};
+        sweep.currentTarget = seen.targets > 0 ? akira::text::format("{}/{}", seen.visited, seen.targets) : std::string{};
     }
 
     const bool logging = developerSettings.discoveryLog();
@@ -372,7 +373,7 @@ void DiscoveryManager::applyView(uint64_t generation, const SeenNetwork& seen)
 
         if (logging)
         {
-            appendDiscoveryLog(std::format("{} {} at {} ({})", console->hardware_id().text(), console->name(),
+            appendDiscoveryLog(akira::text::format("{} {} at {} ({})", console->hardware_id().text(), console->name(),
                 host->getHostAddr(), host->getStateString()));
         }
 
@@ -540,7 +541,7 @@ void DiscoveryManager::runRemoteRefresh(const platform::StopToken& stop, uint64_
     if (!listed)
     {
         log::error("Failed to list PS5 devices (reason {})", static_cast<int>(listed.error().reason));
-        finishRemoteRefresh(generation, {false, std::format("PSN refused the console list ({})",
+        finishRemoteRefresh(generation, {false, akira::text::format("PSN refused the console list ({})",
             listed.error().http_status)});
         return;
     }

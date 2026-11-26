@@ -4,6 +4,7 @@
 #include "app/views/motion.hpp"
 #include "trophies/views/trophy_detail_view.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -252,7 +253,7 @@ void TrophyGameCard::bind(const TrophyManager::Title& title, std::function<void(
 
     nameLabel->setText(title.name.empty() ? title.id.text() : title.name);
 
-    detailLabel->setText(std::format("{}  ·  {}%  ·  {}/{}",
+    detailLabel->setText(akira::text::format("{}  ·  {}%  ·  {}/{}",
         formatTrophyPlatforms(title.platforms),
         title.progress,
         title.earned.total(),

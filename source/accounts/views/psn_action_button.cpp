@@ -1,5 +1,6 @@
 #include "accounts/views/psn_action_button.hpp"
 #include "app/views/theme.hpp"
+#include "util/text_format.hpp"
 
 #include <format>
 
@@ -24,10 +25,10 @@ void PsnActionButton::attach(brls::Button* button, NVGcolor readyColor, std::str
 std::string PsnActionButton::formatWait(int seconds)
 {
     if (seconds < 60)
-        return std::format("{}s", seconds);
+        return akira::text::format("{}s", seconds);
 
     if (seconds < 3600)
-        return std::format("{}m", (seconds + 59) / 60);
+        return akira::text::format("{}m", (seconds + 59) / 60);
 
     int hours = seconds / 3600;
     int minutes = ((seconds % 3600) + 59) / 60;
@@ -37,7 +38,7 @@ std::string PsnActionButton::formatWait(int seconds)
         minutes = 0;
     }
 
-    return minutes > 0 ? std::format("{}h {}m", hours, minutes) : std::format("{}h", hours);
+    return minutes > 0 ? akira::text::format("{}h {}m", hours, minutes) : akira::text::format("{}h", hours);
 }
 
 bool PsnActionButton::isReady() const

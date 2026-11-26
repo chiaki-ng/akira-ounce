@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::app::arisa {
 
@@ -22,7 +23,7 @@ StreamVoice::~StreamVoice()
 auto StreamVoice::open(unsigned channels, unsigned rate) -> std::expected<void, std::string>
 {
     if (channels != provider::AppVoice::channels || rate != provider::AppVoice::sample_rate)
-        return std::unexpected(std::format("the app voice plays {} channels at {} Hz, the stream sends {} at {} Hz",
+        return std::unexpected(akira::text::format("the app voice plays {} channels at {} Hz, the stream sends {} at {} Hz",
             provider::AppVoice::channels, provider::AppVoice::sample_rate, channels, rate));
     std::expected<provider::AppVoice, provider::ProviderError> opened = audio.open_voice(provider::AppVoiceOptions{
         .buffer_frames = provider::AudioFrames::of<bufferFrames>(),
@@ -30,7 +31,7 @@ auto StreamVoice::open(unsigned channels, unsigned rate) -> std::expected<void, 
         .ui_sounds = provider::UiSounds::duck,
     });
     if (!opened)
-        return std::unexpected(std::format("open_voice refused: {}", opened.error().explanation()));
+        return std::unexpected(akira::text::format("open_voice refused: {}", opened.error().explanation()));
     const std::scoped_lock lock(mutex);
     voice.emplace(std::move(*opened));
     droppedFrames = 0;

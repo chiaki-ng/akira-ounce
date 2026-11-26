@@ -12,6 +12,7 @@
 #include "play/stream_settings.hpp"
 #include "settings/developer_settings.hpp"
 #include "settings/ui/setting_rows.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::settings::ui {
 
@@ -58,12 +59,12 @@ auto PowerUserSection::body(composition::Context& context) const -> composition:
         controls::ClosedRange<double>{ .lower_bound = 1.0, .upper_bound = 75.0 }, 1.0,
         [&network] { return static_cast<double>(network.portGuessingCount()); },
         [&network](double value) { network.setPortGuessingCount(static_cast<int>(std::lround(value))); },
-        std::format("{}", network.portGuessingCount())));
+        akira::text::format("{}", network.portGuessingCount())));
     holepunch.push_back(rows.slider(rows.text("akira/settings/probe_socket_count"), "settings/portGuessingSocks",
         controls::ClosedRange<double>{ .lower_bound = 1.0, .upper_bound = 250.0 }, 1.0,
         [&network] { return static_cast<double>(network.portGuessingSocks()); },
         [&network](double value) { network.setPortGuessingSocks(static_cast<int>(std::lround(value))); },
-        std::format("{}", network.portGuessingSocks())));
+        akira::text::format("{}", network.portGuessingSocks())));
     app::Notifier& notifier = parts.notifier;
     std::string flushed = rows.text("akira/settings/trophy_cache_flushed");
     return structure::Form(rows.section(rows.text("akira/settings/streaming_heading"), std::move(streaming)),

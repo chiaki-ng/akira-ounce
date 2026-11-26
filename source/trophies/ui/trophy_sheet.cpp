@@ -22,6 +22,7 @@
 
 #include "app/arisa/artwork.hpp"
 #include "trophies/trophy_listing.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::trophies::ui {
 
@@ -63,7 +64,7 @@ auto TrophySheet::body(composition::Context&) const -> composition::Element
     if (trophy.progress && target > 0 && !trophy.earned)
         shown.push_back(composition::Element(controls::ProgressView(
                             static_cast<double>(std::min(trophy.progress->value, target)), static_cast<double>(target),
-                            components::Text(std::format("{}/{}", trophy.progress->value, target))))
+                            components::Text(akira::text::format("{}/{}", trophy.progress->value, target))))
                             .frame({ .width = barWidth }));
     shown.push_back(components::Text(model->rarityText(trophy))
                         .font(theme::Font::footnote)

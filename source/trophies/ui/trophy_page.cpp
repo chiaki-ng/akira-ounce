@@ -36,6 +36,7 @@
 #include "app/arisa/artwork.hpp"
 #include "trophies/trophy_listing.hpp"
 #include "trophies/ui/grade_counts.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::trophies::ui {
 
@@ -141,12 +142,12 @@ auto TrophyPage::choiceChips(const TrophyModel::View& view) const -> composition
     for (const TrophyListing::Filter filter : TrophyListing::filters)
         chips.push_back(chip(strings->text(TrophyListing::filterKey(filter)), view.trophyListing.filter() == filter,
             [model = model, filter] { model->setTrophyFilter(filter); },
-            std::format("trophies.filter.{}", static_cast<int>(filter))));
+            akira::text::format("trophies.filter.{}", static_cast<int>(filter))));
     chips.push_back(composition::Element(components::Divider()).frame({ .width = 1.0F, .height = 20.0F }));
     for (const TrophyListing::Sort sort : TrophyListing::sorts)
         chips.push_back(chip(strings->text(TrophyListing::sortKey(sort)), view.trophyListing.sort() == sort,
             [model = model, sort] { model->setTrophySort(sort); },
-            std::format("trophies.sort.{}", static_cast<int>(sort))));
+            akira::text::format("trophies.sort.{}", static_cast<int>(sort))));
     return components::HStack(components::HStackOptions{ .spacing = theme::space::sm, .wrap = true }, std::move(chips))
         .focus_section()
         .id(composition::ElementKey{ "trophies.choices" });
@@ -178,7 +179,7 @@ auto TrophyPage::list(const TrophyModel::View& view) const -> composition::Eleme
             components::ForEach(
                 std::move(rows),
                 [](const std::pair<TrophyModel::Trophy, bool>& shown) {
-                    return composition::ElementKey{ std::format("trophy.{}", shown.first.id.value()) };
+                    return composition::ElementKey{ akira::text::format("trophy.{}", shown.first.id.value()) };
                 },
                 [page = *this](const std::pair<TrophyModel::Trophy, bool>& shown) {
                     return page.row(shown.first, shown.second);
@@ -222,7 +223,7 @@ auto TrophyPage::row(const TrophyModel::Trophy& trophy, bool revealed) const -> 
             composition::Element(controls::ProgressView(static_cast<double>(std::min(trophy.progress->value, target)),
                                      static_cast<double>(target)))
                 .frame({ .width = barWidth }),
-            components::Text(std::format("{}/{}", trophy.progress->value, target))
+            components::Text(akira::text::format("{}/{}", trophy.progress->value, target))
                 .font(theme::Font::caption)
                 .foreground_style(theme::ColourRole::secondary_label)));
     }
@@ -267,7 +268,7 @@ auto TrophyPage::row(const TrophyModel::Trophy& trophy, bool revealed) const -> 
         std::move(label))
         .button_style(components::ButtonStyle::plain())
         .button_sizing(components::ButtonSizing::flexible)
-        .id(composition::ElementKey{ std::format("trophies.trophy.{}", id) });
+        .id(composition::ElementKey{ akira::text::format("trophies.trophy.{}", id) });
 }
 
 }

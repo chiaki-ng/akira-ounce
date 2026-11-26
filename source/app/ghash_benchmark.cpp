@@ -3,6 +3,8 @@
 #include <format>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::app {
 
 GhashBenchmark::GhashBenchmark(libchiaking::platform::CryptoProvider& crypto,
@@ -40,8 +42,8 @@ auto GhashBenchmark::measure(std::size_t size, const libchiaking::platform::Stop
         return false;
     const double operations = completed * 1000.0 / elapsedMs;
     const double megabytes = completed * static_cast<double>(size) * 1000.0 / (elapsedMs * 1024.0 * 1024.0);
-    line(strings.format("akira/benchmark/pmull_result", std::format("{:.0f}", operations), std::format("{:.2f}", megabytes),
-        std::format("{:.1f}", elapsedMs)));
+    line(strings.format("akira/benchmark/pmull_result", akira::text::format("{:.0f}", operations), akira::text::format("{:.2f}", megabytes),
+        akira::text::format("{:.1f}", elapsedMs)));
     line(std::string());
     return true;
 }

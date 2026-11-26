@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "accounts/ui/account_avatar.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::accounts::ui {
 
@@ -51,7 +52,7 @@ auto AccountMenu::choices(AccountModel& model, const AccountModel::View& view, c
             composition::Element item = entry.active
                 ? composition::Element(components::Button(label, components::Image::SystemName{ "check" }, chosen))
                 : composition::Element(components::Button(label, chosen));
-            items.push_back(std::move(item).id(composition::ElementKey{ std::format("header.profile.{}", entry.id) }));
+            items.push_back(std::move(item).id(composition::ElementKey{ akira::text::format("header.profile.{}", entry.id) }));
         }
         items.push_back(components::Divider());
         items.push_back(components::Button(add, components::Image::SystemName{ "person_add" }, [held] { held->welcome(true); }));

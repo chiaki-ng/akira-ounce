@@ -4,6 +4,7 @@
 #include "util/http.hpp"
 #include "util/http_pool.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -84,7 +85,7 @@ const char* TrophyManager::reasonName(Unanswered::Reason reason)
 accounts::Error TrophyManager::failureOf(const Unanswered& cause)
 {
     std::string message = cause.http_status != 0
-        ? std::format("{} (HTTP {})", reasonName(cause.reason), cause.http_status)
+        ? akira::text::format("{} (HTTP {})", reasonName(cause.reason), cause.http_status)
         : std::string(reasonName(cause.reason));
 
     switch (cause.reason)

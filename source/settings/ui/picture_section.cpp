@@ -27,6 +27,7 @@
 
 #include "cloud/cloud_settings.hpp"
 #include "play/stream_settings.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::settings::ui {
 
@@ -147,7 +148,7 @@ auto PictureSection::adjustments(const SettingRows& rows) const -> composition::
         controls::ClosedRange<double>{ .lower_bound = 1.0, .upper_bound = 10.0 }, 1.0,
         [&stream] { return static_cast<double>(stream.ditheringStrength()); },
         [&stream](double value) { stream.setDitheringStrength(static_cast<float>(std::floor(value))); },
-        std::format("{}", static_cast<int>(stream.ditheringStrength()))));
+        akira::text::format("{}", static_cast<int>(stream.ditheringStrength()))));
     return rows.section(rows.text("akira/settings/picture_adjustments"), std::move(shown));
 }
 

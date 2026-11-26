@@ -3,6 +3,7 @@
 #include "app/view_services.hpp"
 #include "play/session.hpp"
 #include "app/views/theme.hpp"
+#include "util/text_format.hpp"
 
 #include <borealis/core/i18n.hpp>
 #include <format>
@@ -143,7 +144,7 @@ void StatsCard::drawPanel(NVGcontext* vg, const CardTheme& t, float x, float y, 
     std::string rtt = "--";
     if (st.rtt_valid)
     {
-        rtt = std::format("{:.0f}", st.rtt_ms);
+        rtt = akira::text::format("{:.0f}", st.rtt_ms);
         rttTone = st.rtt_ms < 30.0f ? kGood : (st.rtt_ms < 70.0f ? kWarn : kBad);
     }
 
@@ -152,26 +153,26 @@ void StatsCard::drawPanel(NVGcontext* vg, const CardTheme& t, float x, float y, 
     std::string net = "--";
     if (st.latency_valid)
     {
-        total = std::format("{:.0f}", st.total_ms);
-        net = std::format("{:.0f}", st.net_ms);
+        total = akira::text::format("{:.0f}", st.total_ms);
+        net = akira::text::format("{:.0f}", st.net_ms);
         latTone = st.total_ms < 50.0f ? kGood : (st.total_ms < 100.0f ? kWarn : kBad);
     }
 
     std::vector<Readout> link = {
-        { "akira/stream_menu/stat_fps"_i18n,    std::format("{:.1f}", st.fps),                   "",     fpsTone },
-        { "akira/stream_menu/stat_rate"_i18n,   std::format("{:.1f}", st.measured_bitrate_mbps), "Mbps", kVal },
+        { "akira/stream_menu/stat_fps"_i18n,    akira::text::format("{:.1f}", st.fps),                   "",     fpsTone },
+        { "akira/stream_menu/stat_rate"_i18n,   akira::text::format("{:.1f}", st.measured_bitrate_mbps), "Mbps", kVal },
         { "akira/stream_menu/stat_rtt"_i18n,    rtt,                                             "ms",   rttTone },
-        { "akira/stream_menu/stat_loss"_i18n,   std::format("{:.1f}", st.packet_loss_percent),   "%",    lossTone },
-        { "akira/stream_menu/stat_lost"_i18n,   std::format("{}", st.network_frames_lost),       "",     kVal },
+        { "akira/stream_menu/stat_loss"_i18n,   akira::text::format("{:.1f}", st.packet_loss_percent),   "%",    lossTone },
+        { "akira/stream_menu/stat_lost"_i18n,   akira::text::format("{}", st.network_frames_lost),       "",     kVal },
         { "akira/stream_menu/stat_decode"_i18n, st.is_hardware_decoder ? std::string(app::ViewServices::current().session.get().video().decoderStat()) : "SW", "", kVal },
     };
 
     std::vector<Readout> latency = {
         { "akira/stream_menu/stat_total"_i18n,  total,                                        "ms", latTone },
         { "akira/stream_menu/stat_net"_i18n,    net,                                          "ms", kVal },
-        { "akira/stream_menu/stat_visual"_i18n, std::format("{:.1f}", st.visual_ms),          "ms", kVal },
-        { "akira/stream_menu/stat_jitter"_i18n, std::format("{:.1f}", st.jitter_ms),          "ms", kVal },
-        { "akira/stream_menu/stat_source"_i18n, std::format("{:.1f}", st.source_fps),         "",   kVal },
+        { "akira/stream_menu/stat_visual"_i18n, akira::text::format("{:.1f}", st.visual_ms),          "ms", kVal },
+        { "akira/stream_menu/stat_jitter"_i18n, akira::text::format("{:.1f}", st.jitter_ms),          "ms", kVal },
+        { "akira/stream_menu/stat_source"_i18n, akira::text::format("{:.1f}", st.source_fps),         "",   kVal },
     };
 
     drawReadouts(vg, t, x, y, link);

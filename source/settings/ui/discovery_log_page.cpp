@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::settings::ui {
 
 namespace async = ::arisa::async;
@@ -54,7 +56,7 @@ auto DiscoveryLogPage::body(composition::Context& context) const -> composition:
                             .foreground_style(theme::ColourRole::secondary_label));
     for (const std::string& line : journal.lines)
         lines.push_back(components::Text(line).font(theme::Font::footnote.monospaced()).foreground_style(theme::ColourRole::secondary_label));
-    const std::string count = journal.enabled ? std::format("{}", journal.lines.size()) : strings->text("akira/settings/discovery_log_off");
+    const std::string count = journal.enabled ? akira::text::format("{}", journal.lines.size()) : strings->text("akira/settings/discovery_log_off");
     return components::VStack(components::VStackOptions{ .alignment = components::HorizontalAlignment::leading,
                                   .spacing = theme::Space{ 10.0F } },
         components::HStack(components::HStackOptions{ .spacing = theme::space::sm }, components::Spacer(),

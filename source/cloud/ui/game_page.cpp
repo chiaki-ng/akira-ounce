@@ -38,6 +38,7 @@
 #include "app/arisa/art_session.hpp"
 #include "app/arisa/artwork.hpp"
 #include "cloud/game_facts.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::cloud::ui {
 
@@ -183,7 +184,7 @@ auto GamePage::heading(const CloudModel::Detail& detail) const -> composition::E
     std::string platform = detail.game.platform;
     std::ranges::transform(platform, platform.begin(), [](unsigned char letter) { return static_cast<char>(std::toupper(letter)); });
     const std::string eyebrow = platform.empty() ? strings->text("akira/cloud/card_badge")
-                                                 : std::format("{} · {}", platform, strings->text("akira/cloud/card_badge"));
+                                                 : akira::text::format("{} · {}", platform, strings->text("akira/cloud/card_badge"));
     composition::Element title = components::Text(detail.game.name)
                                      .font(theme::Font::large_title)
                                      .font_weight(theme::Font::Weight::bold)
@@ -429,11 +430,11 @@ auto GamePage::rating(const GameDetail::Rating& rated) const -> composition::Ele
     {
         const int percent = std::clamp(rated.percentByStars[static_cast<std::size_t>(count - 1)], 0, 100);
         bars.push_back(components::HStack(components::HStackOptions{ .spacing = theme::space::sm },
-            components::Text(std::format("{}", count)).font(theme::Font::caption).foreground_style(theme::ColourRole::secondary_label),
+            components::Text(akira::text::format("{}", count)).font(theme::Font::caption).foreground_style(theme::ColourRole::secondary_label),
             controls::ProgressView(static_cast<double>(percent) / 100.0)
                 .progress_view_style(controls::ProgressViewStyle::linear())
                 .frame({ .width = barWidth }),
-            components::Text(std::format("{}%", percent)).font(theme::Font::caption).foreground_style(theme::ColourRole::secondary_label)));
+            components::Text(akira::text::format("{}%", percent)).font(theme::Font::caption).foreground_style(theme::ColourRole::secondary_label)));
     }
     return components::HStack(components::HStackOptions{ .alignment = components::VerticalAlignment::top,
                                   .spacing = theme::Space{ 22.0F } },

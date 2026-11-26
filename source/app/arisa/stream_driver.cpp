@@ -48,6 +48,7 @@
 #include "play/stream_settings.hpp"
 #include "settings/developer_settings.hpp"
 #include "settings/settings_store.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::app::arisa {
 
@@ -733,7 +734,7 @@ auto StreamDriver::cloudBandwidth() -> std::optional<std::string>
     const play::StreamStats stats = services.session.get().getStreamStats();
     if (!stats.console_quality_valid || stats.target_bitrate_kbps == 0)
         return std::nullopt;
-    return std::format("{:.1f} Mbps", stats.target_bitrate_kbps / 1000.0);
+    return akira::text::format("{:.1f} Mbps", stats.target_bitrate_kbps / 1000.0);
 }
 
 auto StreamDriver::overlayMode(play::DiagnosticsAppearance::Level level) -> play::StatsOverlayMode

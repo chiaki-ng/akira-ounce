@@ -3,6 +3,8 @@
 #include <format>
 #include <utility>
 
+#include "util/text_format.hpp"
+
 namespace akira::platform::deko3d
 {
 
@@ -13,7 +15,7 @@ DkshShaderSource::DkshShaderSource(std::string directory)
 
 std::optional<ShaderSource::Code> DkshShaderSource::load(StaticShader shader)
 {
-    return read(std::format("{}.dksh", stem(shader)));
+    return read(akira::text::format("{}.dksh", stem(shader)));
 }
 
 std::optional<ShaderSource::Code> DkshShaderSource::load(const VideoFragmentVariant& variant)
@@ -37,7 +39,7 @@ std::string DkshShaderSource::fileName(const VideoFragmentVariant& variant)
 
 std::optional<ShaderSource::Code> DkshShaderSource::read(std::string_view fileName) const
 {
-    auto contents = readFile(std::format("{}/{}", m_directory, fileName));
+    auto contents = readFile(akira::text::format("{}/{}", m_directory, fileName));
     if (!contents)
         return std::nullopt;
     return Code(contents->begin(), contents->end());

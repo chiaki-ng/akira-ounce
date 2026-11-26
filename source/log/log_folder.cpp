@@ -8,6 +8,8 @@
 #include <system_error>
 #include <tuple>
 
+#include "util/text_format.hpp"
+
 namespace akira::log {
 
 auto LogFolder::list(const std::filesystem::path& folder) -> std::optional<std::vector<Entry>>
@@ -50,10 +52,10 @@ auto LogFolder::sizeText(std::uintmax_t bytes) -> std::string
 {
     constexpr std::uintmax_t kilobyte = 1024;
     if (bytes < kilobyte)
-        return std::format("{} B", bytes);
+        return akira::text::format("{} B", bytes);
     if (bytes < kilobyte * kilobyte)
-        return std::format("{} KB", (bytes + kilobyte / 2) / kilobyte);
-    return std::format("{:.1f} MB", static_cast<double>(bytes) / static_cast<double>(kilobyte * kilobyte));
+        return akira::text::format("{} KB", (bytes + kilobyte / 2) / kilobyte);
+    return akira::text::format("{:.1f} MB", static_cast<double>(bytes) / static_cast<double>(kilobyte * kilobyte));
 }
 
 auto LogFolder::modifiedText(std::time_t modified) -> std::string

@@ -8,6 +8,8 @@
 #include <fstream>
 #include <utility>
 
+#include "util/text_format.hpp"
+
 namespace akira::app {
 
 Screenshot::Screenshot(std::uint32_t width, std::uint32_t height, std::vector<std::byte> rgba)
@@ -26,7 +28,7 @@ auto Screenshot::create(std::uint32_t width, std::uint32_t height, std::vector<s
 
 auto Screenshot::fileName(const std::tm& local) -> std::string
 {
-    return std::format("{:04}-{:02}-{:02}_{:02}-{:02}-{:02}.png", local.tm_year + 1900, local.tm_mon + 1, local.tm_mday,
+    return akira::text::format("{:04}-{:02}-{:02}_{:02}-{:02}-{:02}.png", local.tm_year + 1900, local.tm_mon + 1, local.tm_mday,
         local.tm_hour, local.tm_min, local.tm_sec);
 }
 

@@ -42,6 +42,7 @@
 
 #include "play/ui/button_board_view.hpp"
 #include "play/ui/players_panel.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::play::ui {
 
@@ -280,12 +281,12 @@ auto StreamDock::describe(ColourAdjustments::Channel channel, double value) -> s
     const auto points = static_cast<int>(std::lround(value * 100.0));
     switch (channel)
     {
-        case ColourAdjustments::Channel::Brightness: return points > 0 ? std::format("+{}", points) : std::format("{}", points);
+        case ColourAdjustments::Channel::Brightness: return points > 0 ? akira::text::format("+{}", points) : akira::text::format("{}", points);
         case ColourAdjustments::Channel::Contrast:
-        case ColourAdjustments::Channel::Saturation: return std::format("{}%", points);
+        case ColourAdjustments::Channel::Saturation: return akira::text::format("{}%", points);
         case ColourAdjustments::Channel::Gamma: break;
     }
-    return std::format("{:.2f}", value);
+    return akira::text::format("{:.2f}", value);
 }
 
 auto StreamDock::colourRow(const ColourAdjustments& colour, ColourAdjustments::Channel channel) const -> composition::Element
@@ -348,7 +349,7 @@ auto StreamDock::soundPanel(Volume volume) const -> composition::Element
             .font(theme::Font::title2)
             .font_weight(theme::Font::Weight::semibold),
         components::HStack(components::Text(title), components::Spacer(),
-            components::Text(std::format("{}%", std::lround(volume.level() * 100.0))).font(theme::Font::body.monospaced_digit())),
+            components::Text(akira::text::format("{}%", std::lround(volume.level() * 100.0))).font(theme::Font::body.monospaced_digit())),
         controls::Slider(composition::Binding<double>([edit] { return edit->view().get().volume.level(); },
                              [edit, sink](double value) {
                                  const Volume chosen(value);
@@ -418,7 +419,7 @@ auto StreamDock::streamPanel(const settings::ui::PictureOptions::Values& values)
     rows.push_back(bitrateRow(which, shown));
     std::vector<std::pair<int, std::string>> targets{ { 0, strings->text("akira/settings/upscale_off") } };
     for (const int target : shown.upscaleTargets())
-        targets.emplace_back(target, std::format("{}p", target));
+        targets.emplace_back(target, akira::text::format("{}p", target));
     rows.push_back(controls::Picker(strings->text("akira/settings/upscale_to"),
         composition::Binding<int>([edit, which] { return edit->profile(which).upscaleTarget(); },
             [edit, which](int value) { edit->chooseUpscale(which, value); }),
@@ -503,7 +504,7 @@ auto StreamDock::counter(const DiagnosticsReport::Counter& shown) const -> compo
     return components::VStack(components::VStackOptions{ .alignment = components::HorizontalAlignment::leading,
                                   .spacing = theme::Space{ 5.0F } },
         components::Text(strings->text(shown.label)).font(theme::Font::caption).foreground_style(theme::ColourRole::secondary_label),
-        components::Text(std::format("{}", shown.value))
+        components::Text(akira::text::format("{}", shown.value))
             .font(theme::Font::title3.monospaced_digit())
             .font_weight(theme::Font::Weight::medium))
         .frame({ .max_width = composition::infinity, .alignment = composition::Alignment::leading })
@@ -547,11 +548,11 @@ auto StreamDock::troubleshoot(composition::StateHandle<int> chosenTopic) const -
     for (const char* key : topics)
         labels.push_back(strings->text(key));
     std::vector<composition::Element> tips;
-    tips.push_back(components::Text(strings->text(std::format("akira/diagnostics/tips_{}_heading", chosen)))
+    tips.push_back(components::Text(strings->text(akira::text::format("akira/diagnostics/tips_{}_heading", chosen)))
                        .font(theme::Font::subheadline)
                        .font_weight(theme::Font::Weight::semibold));
     for (int index = 0; index < tipCount(chosen); ++index)
-        tips.push_back(components::Text(strings->text(std::format("akira/diagnostics/tips_{}_{}", chosen, index)))
+        tips.push_back(components::Text(strings->text(akira::text::format("akira/diagnostics/tips_{}_{}", chosen, index)))
                            .font(theme::Font::callout)
                            .foreground_style(theme::ColourRole::secondary_label));
     return components::VStack(components::VStackOptions{ .alignment = components::HorizontalAlignment::leading,

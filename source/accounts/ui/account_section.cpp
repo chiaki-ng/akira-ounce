@@ -36,6 +36,7 @@
 #include <utility>
 
 #include "accounts/ui/account_avatar.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::accounts::ui {
 
@@ -99,13 +100,13 @@ auto AccountSection::card(const AccountModel::View& view) const -> composition::
                             .font(theme::Font::footnote)
                             .foreground_style(theme::ColourRole::secondary_label));
         lines.push_back(components::HStack(components::HStackOptions{ .spacing = theme::space::md },
-            components::Label(std::format("{}", earned.platinum), components::Image::SystemName{ "trophy" })
+            components::Label(akira::text::format("{}", earned.platinum), components::Image::SystemName{ "trophy" })
                 .foreground_style(theme::ColourRole::cyan),
-            components::Label(std::format("{}", earned.gold), components::Image::SystemName{ "trophy" })
+            components::Label(akira::text::format("{}", earned.gold), components::Image::SystemName{ "trophy" })
                 .foreground_style(theme::ColourRole::yellow),
-            components::Label(std::format("{}", earned.silver), components::Image::SystemName{ "trophy" })
+            components::Label(akira::text::format("{}", earned.silver), components::Image::SystemName{ "trophy" })
                 .foreground_style(theme::ColourRole::gray),
-            components::Label(std::format("{}", earned.bronze), components::Image::SystemName{ "trophy" })
+            components::Label(akira::text::format("{}", earned.bronze), components::Image::SystemName{ "trophy" })
                 .foreground_style(theme::ColourRole::brown))
                             .font(theme::Font::footnote)
                             .id(composition::ElementKey{ "account.trophies" }));
@@ -140,12 +141,12 @@ auto AccountSection::profiles(const AccountModel::View& view) const -> compositi
         line.push_back(components::Button([held, id = entry.id] { held->switchTo(id); },
             components::HStack(components::HStackOptions{ .spacing = theme::Space{ 12.0F } }, std::move(label)))
                            .button_sizing(components::ButtonSizing::flexible)
-                           .id(composition::ElementKey{ std::format("account.profile.{}", entry.id) }));
+                           .id(composition::ElementKey{ akira::text::format("account.profile.{}", entry.id) }));
         if (!entry.active || only)
             line.push_back(components::Button([held, id = entry.id] { held->askRemove(id); },
                 components::Image(components::Image::SystemName{ "delete" }).foreground_style(theme::ColourRole::secondary_label))
                                .button_style(components::ButtonStyle::glass(theme::Glass::clear()))
-                               .id(composition::ElementKey{ std::format("account.remove.{}", entry.id) }));
+                               .id(composition::ElementKey{ akira::text::format("account.remove.{}", entry.id) }));
         rows.push_back(components::HStack(components::HStackOptions{ .spacing = theme::space::sm }, std::move(line)));
     }
     rows.push_back(components::Button(strings->text("akira/settings/add_profile"), components::Image::SystemName{ "person_add" },
@@ -186,7 +187,7 @@ auto AccountSection::companion(const AccountModel::View& view) const -> composit
     AccountModel* held = model;
     std::vector<composition::Element> rows;
     rows.push_back(described(components::LabeledContent(strings->text("akira/settings/companion_port"), controls::TextField(strings->text("akira/settings/companion_port"),
-                                 composition::Binding<std::string>([port = std::format("{}", view.identity.companionPort)] { return port; },
+                                 composition::Binding<std::string>([port = akira::text::format("{}", view.identity.companionPort)] { return port; },
                                      [held](std::string text) { held->setCompanionPort(text); }),
                                  controls::TextFieldOptions{ .prompt = strings->text("akira/settings/companion_port_placeholder") })
                                  .keyboard_type(provider::KeyboardType::number_pad)
@@ -207,7 +208,7 @@ auto AccountSection::credential(const AccountDesk::Credential& shown) const -> c
     if (shown.expired)
         text += strings->text("akira/settings/expired_suffix");
     return components::LabeledContent(strings->text(AccountModel::secretKey(shown.secret)), std::move(text))
-        .id(composition::ElementKey{ std::format("account.secret.{}", static_cast<int>(shown.secret)) });
+        .id(composition::ElementKey{ akira::text::format("account.secret.{}", static_cast<int>(shown.secret)) });
 }
 
 auto AccountSection::refreshLabel(const AccountDesk::Refresh& refresh) const -> std::string

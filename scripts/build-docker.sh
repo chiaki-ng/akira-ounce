@@ -96,6 +96,8 @@ cmake -G Ninja -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
     -DPLATFORM_SWITCH=ON \
     -DAKIRA_PLATFORM="${AKIRA_PLATFORM}" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_C_FLAGS_RELWITHDEBINFO="-O2 -g1 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O2 -g1 -DNDEBUG" \
     -DBUILD_CHANNEL="${BUILD_CHANNEL:-dev}" \
     -DVERSION_PRERELEASE="${VERSION_PRERELEASE}" \
     -DMUTE_CHIAKI_LOGS="${MUTE_CHIAKI_LOGS}" \
@@ -111,6 +113,6 @@ cmake -G Ninja -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
     -DAKIRA_ARISA_GPU="${AKIRA_ARISA_GPU}"
 echo "${ENVIRONMENT}" > "${ENVIRONMENT_FILE}"
 
-cmake --build "${BUILD_DIR}" --target "${NRO_TARGET}.nro"
+cmake --build "${BUILD_DIR}" --target "${NRO_TARGET}.nro" -j4
 
 ls -la "${BUILD_DIR}"/*.nro

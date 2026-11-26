@@ -4,6 +4,7 @@
 #include "app/views/motion.hpp"
 #include "trophies/views/trophy_list_tab.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -196,7 +197,7 @@ std::string formatTrophyRarity(const libchiaking::trophies::Trophy& trophy)
     if (rate <= 0.0)
         return brls::getStr(key);
 
-    return std::format("{}  ·  {:.1f}%", brls::getStr(key), rate);
+    return akira::text::format("{}  ·  {:.1f}%", brls::getStr(key), rate);
 }
 
 static std::string trophyTypeLabel(libchiaking::trophies::Grade grade)
@@ -216,7 +217,7 @@ static std::string formatEarnedDate(const std::optional<libchiaking::trophies::T
     if (!earnedAt)
         return std::string();
 
-    return std::format("{:%F}", std::chrono::floor<std::chrono::days>(*earnedAt));
+    return akira::text::format("{:%F}", std::chrono::floor<std::chrono::days>(*earnedAt));
 }
 
 TrophyRowCell::TrophyRowCell()
@@ -306,8 +307,8 @@ void TrophyRowCell::bindTrophy(const libchiaking::trophies::Trophy& trophy)
     {
         std::string date = formatEarnedDate(trophy.earned_at);
         stateLabel->setText(date.empty()
-            ? std::format("{}  {}", trophyTypeLabel(trophy.grade), "akira/trophies/earned"_i18n)
-            : std::format("{}  {}", trophyTypeLabel(trophy.grade), date));
+            ? akira::text::format("{}  {}", trophyTypeLabel(trophy.grade), "akira/trophies/earned"_i18n)
+            : akira::text::format("{}  {}", trophyTypeLabel(trophy.grade), date));
         stateLabel->setTextColor(app::views::active().success);
     }
     else
@@ -328,7 +329,7 @@ void TrophyRowCell::bindTrophy(const libchiaking::trophies::Trophy& trophy)
         float ratio = static_cast<float>(reached) / static_cast<float>(target);
         progressFill->setWidthPercentage(std::clamp(ratio, 0.0f, 1.0f) * 100.0f);
 
-        detailLabel->setText(std::format("{}  ·  {}/{}",
+        detailLabel->setText(akira::text::format("{}  ·  {}/{}",
             concealed ? "akira/trophies/hidden_detail"_i18n : trophy.detail,
             reached, target));
     }
@@ -499,7 +500,7 @@ void SummaryCell::bindSummary(int earned, int available, int progress, const lib
     {
         app::views::motion::countTo(ringLabel, ringLabelAnim,
             prevRingPct < 0 ? 0 : static_cast<int>(std::lround(ringLabelAnim.getValue())),
-            progress, 520, [](int n) { return std::format("{}%", n); });
+            progress, 520, [](int n) { return akira::text::format("{}%", n); });
         prevRingPct = progress;
     }
     ring->setProgress(progress / 100.0f);

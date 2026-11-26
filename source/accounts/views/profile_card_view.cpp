@@ -5,6 +5,7 @@
 #endif
 #include "app/views/theme.hpp"
 #include "trophies/trophy_manager.hpp"
+#include "util/text_format.hpp"
 
 #include <algorithm>
 #include <format>
@@ -157,7 +158,7 @@ void ProfileCardView::refresh() {
             if (!*guard)
                 return;
             trophyCol->setVisibility(brls::Visibility::VISIBLE);
-            levelLabel->setText(std::format("{} {} · {}%",
+            levelLabel->setText(akira::text::format("{} {} · {}%",
                 "akira/settings/trophy_level"_i18n, summary.level, summary.progress));
 
             int pct = std::min(100, static_cast<int>(summary.progress));

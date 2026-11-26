@@ -5,6 +5,8 @@
 #include <format>
 #include <utility>
 
+#include "util/text_format.hpp"
+
 namespace akira::play {
 
 StatsReadout::StatsReadout(Sample sample)
@@ -33,33 +35,33 @@ auto StatsReadout::gradedShare(float share, float good, float fair) -> Tone
 
 auto StatsReadout::fps() const -> std::string
 {
-    return std::format("{:.1f}", sample.stats.fps);
+    return akira::text::format("{:.1f}", sample.stats.fps);
 }
 
 auto StatsReadout::rate() const -> std::string
 {
-    return std::format("{:.1f}", sample.stats.measured_bitrate_mbps);
+    return akira::text::format("{:.1f}", sample.stats.measured_bitrate_mbps);
 }
 
 auto StatsReadout::loss() const -> std::string
 {
-    return std::format("{:.1f}", sample.stats.packet_loss_percent);
+    return akira::text::format("{:.1f}", sample.stats.packet_loss_percent);
 }
 
 auto StatsReadout::rtt() const -> std::string
 {
-    return sample.stats.rtt_valid ? std::format("{:.0f}", sample.stats.rtt_ms) : std::string("--");
+    return sample.stats.rtt_valid ? akira::text::format("{:.0f}", sample.stats.rtt_ms) : std::string("--");
 }
 
 auto StatsReadout::totalLatency() const -> std::string
 {
-    return sample.stats.latency_valid ? std::format("{:.0f}", sample.stats.total_ms) : std::string("--");
+    return sample.stats.latency_valid ? akira::text::format("{:.0f}", sample.stats.total_ms) : std::string("--");
 }
 
 auto StatsReadout::uptime() const -> std::string
 {
     const std::uint64_t seconds = sample.stats.stream_duration_seconds;
-    return std::format("{}m{:02}s", seconds / 60, seconds % 60);
+    return akira::text::format("{}m{:02}s", seconds / 60, seconds % 60);
 }
 
 auto StatsReadout::fpsTone() const -> Tone
@@ -128,8 +130,8 @@ auto StatsReadout::upscalePath() const -> std::string
     if (!shown.active)
         return {};
     if (shown.easu)
-        return std::format("{}\xe2\x80\xba{}\xe2\x80\xba{}", shown.inputHeight, shown.targetHeight, shown.displayHeight);
-    return std::format("{}\xe2\x80\xba{}", shown.inputHeight, shown.displayHeight);
+        return akira::text::format("{}\xe2\x80\xba{}\xe2\x80\xba{}", shown.inputHeight, shown.targetHeight, shown.displayHeight);
+    return akira::text::format("{}\xe2\x80\xba{}", shown.inputHeight, shown.displayHeight);
 }
 
 auto StatsReadout::upscaleDetail() const -> std::string
@@ -142,7 +144,7 @@ auto StatsReadout::upscaleDetail() const -> std::string
     {
         if (!detail.empty())
             detail += " \xc2\xb7 ";
-        detail += std::format("RCAS {}%", rcasStrength());
+        detail += akira::text::format("RCAS {}%", rcasStrength());
     }
     return detail;
 }
@@ -152,15 +154,15 @@ auto StatsReadout::upscaleSummary() const -> std::string
     const UpscalingSummary& shown = sample.upscaling;
     if (!shown.active)
         return {};
-    const std::string rcas = std::format("RCAS {}%", rcasStrength());
+    const std::string rcas = akira::text::format("RCAS {}%", rcasStrength());
     if (!shown.easu)
         return shown.rcas ? rcas : std::string("RCAS");
     const float scale = shown.inputHeight > 0
         ? static_cast<float>(shown.targetHeight) / static_cast<float>(shown.inputHeight)
         : 1.0f;
-    std::string summary = std::format("{:.2f}\xc3\x97 {}", scale, shown.supersampling ? "SS" : "EASU");
+    std::string summary = akira::text::format("{:.2f}\xc3\x97 {}", scale, shown.supersampling ? "SS" : "EASU");
     if (shown.rcas)
-        summary += std::format(" \xc2\xb7 {}", rcas);
+        summary += akira::text::format(" \xc2\xb7 {}", rcas);
     return summary;
 }
 
@@ -168,16 +170,16 @@ auto StatsReadout::context() const -> std::string
 {
     if (!sample.context.empty())
         return sample.context;
-    return std::format("{} \xc2\xb7 {}", sample.stats.is_hevc ? "PS5" : "PS4", sample.tunnel ? "VPN" : "Direct");
+    return akira::text::format("{} \xc2\xb7 {}", sample.stats.is_hevc ? "PS5" : "PS4", sample.tunnel ? "VPN" : "Direct");
 }
 
 auto StatsReadout::requested() const -> std::vector<Cell>
 {
     const StreamStats& stats = sample.stats;
     return {
-        Cell{ .label = "Res", .value = std::format("{}x{}", stats.requested_width, stats.requested_height) },
-        Cell{ .label = "FPS", .value = std::format("{}", stats.requested_fps) },
-        Cell{ .label = "Rate", .value = std::format("{:.1f}", static_cast<float>(stats.requested_bitrate) / 1000.0f), .unit = "Mb" },
+        Cell{ .label = "Res", .value = akira::text::format("{}x{}", stats.requested_width, stats.requested_height) },
+        Cell{ .label = "FPS", .value = akira::text::format("{}", stats.requested_fps) },
+        Cell{ .label = "Rate", .value = akira::text::format("{:.1f}", static_cast<float>(stats.requested_bitrate) / 1000.0f), .unit = "Mb" },
         Cell{ .label = "Codec", .value = codec(stats.requested_hevc) },
     };
 }
@@ -186,7 +188,7 @@ auto StatsReadout::output() const -> std::vector<Cell>
 {
     const StreamStats& stats = sample.stats;
     return {
-        Cell{ .label = "Res", .value = std::format("{}x{}", stats.video_width, stats.video_height) },
+        Cell{ .label = "Res", .value = akira::text::format("{}x{}", stats.video_width, stats.video_height) },
         Cell{ .label = "FPS", .value = fps(), .tone = fpsTone() },
         Cell{ .label = "Path", .value = stats.is_hardware_decoder ? sample.decoder : std::string("SW") },
         Cell{ .label = "Codec", .value = codec(stats.is_hevc) },
@@ -199,7 +201,7 @@ auto StatsReadout::link() const -> std::vector<Cell>
         Cell{ .label = "RTT", .value = rtt(), .unit = "ms", .tone = rttTone() },
         Cell{ .label = "Rate", .value = rate(), .unit = "Mb", .tone = rateTone() },
         Cell{ .label = "Loss", .value = loss(), .unit = "%", .tone = lossTone() },
-        Cell{ .label = "Lost", .value = std::format("{}", sample.stats.network_frames_lost), .tone = lostTone() },
+        Cell{ .label = "Lost", .value = akira::text::format("{}", sample.stats.network_frames_lost), .tone = lostTone() },
     };
 }
 
@@ -221,20 +223,20 @@ auto StatsReadout::legend() const -> std::vector<Cell>
 {
     const StreamStats& stats = sample.stats;
     return {
-        Cell{ .label = "Net", .value = stats.latency_valid ? std::format("{:.0f}", stats.net_ms) : std::string("--") },
-        Cell{ .label = "Visual", .value = std::format("{:.1f}", stats.visual_ms) },
-        Cell{ .label = "Decode", .value = std::format("{:.1f}", stats.decode_ms) },
-        Cell{ .label = "Jitter", .value = std::format("{:.1f}", stats.jitter_ms) },
+        Cell{ .label = "Net", .value = stats.latency_valid ? akira::text::format("{:.0f}", stats.net_ms) : std::string("--") },
+        Cell{ .label = "Visual", .value = akira::text::format("{:.1f}", stats.visual_ms) },
+        Cell{ .label = "Decode", .value = akira::text::format("{:.1f}", stats.decode_ms) },
+        Cell{ .label = "Jitter", .value = akira::text::format("{:.1f}", stats.jitter_ms) },
     };
 }
 
 auto StatsReadout::footer() const -> std::vector<Cell>
 {
     return {
-        Cell{ .label = "SRC", .value = std::format("{:.1f}", sample.stats.source_fps) },
+        Cell{ .label = "SRC", .value = akira::text::format("{:.1f}", sample.stats.source_fps) },
         Cell{ .label = "GHASH", .value = "PMULL" },
         Cell{ .label = "VPN", .value = sample.tunnel.value_or("Off") },
-        Cell{ .label = "REC", .value = std::format("{}", sample.stats.frames_recovered) },
+        Cell{ .label = "REC", .value = akira::text::format("{}", sample.stats.frames_recovered) },
     };
 }
 

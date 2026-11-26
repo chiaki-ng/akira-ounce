@@ -8,6 +8,7 @@
 #include <iterator>
 
 #include "platform/factory.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::settings::views {
 
@@ -517,12 +518,12 @@ void SettingsPictureView::initDitheringStrengthSlider() {
             float strength = MIN_STRENGTH + value * (MAX_STRENGTH - MIN_STRENGTH);
             strength = static_cast<float>(static_cast<int>(strength));
             services->stream.setDitheringStrength(strength);
-            ditheringStrengthSlider->detail->setText(std::format("{}", static_cast<int>(strength)));
+            ditheringStrengthSlider->detail->setText(akira::text::format("{}", static_cast<int>(strength)));
             services->store.save();
         }
     );
 
-    ditheringStrengthSlider->detail->setText(std::format("{}", static_cast<int>(current)));
+    ditheringStrengthSlider->detail->setText(akira::text::format("{}", static_cast<int>(current)));
 }
 
 void SettingsPictureView::initRcasEnabledToggle() {
@@ -552,13 +553,13 @@ void SettingsPictureView::initRcasSharpnessSlider() {
             float sharpness = (1.0f - value) * 2.0f;
             services->stream.setRcasSharpness(sharpness);
             int percent = static_cast<int>(value * 100.0f);
-            rcasSharpnessSlider->detail->setText(std::format("{}%", percent));
+            rcasSharpnessSlider->detail->setText(akira::text::format("{}%", percent));
             services->store.save();
         }
     );
 
     int percent = static_cast<int>(normalized * 100.0f);
-    rcasSharpnessSlider->detail->setText(std::format("{}%", percent));
+    rcasSharpnessSlider->detail->setText(akira::text::format("{}%", percent));
 }
 
 void SettingsPictureView::initRendererSection() {

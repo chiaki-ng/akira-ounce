@@ -2,6 +2,7 @@
 #include "log/log.hpp"
 
 #include "app/views/theme.hpp"
+#include "util/text_format.hpp"
 
 #include <chrono>
 #include <ctime>
@@ -40,7 +41,7 @@ void LogPane::addLine(const std::string& line)
     std::time_t tt = std::chrono::system_clock::to_time_t(now);
     std::tm time_tm = *std::localtime(&tt);
 
-    lines.push_back(std::format("{:02}:{:02}:{:02}.{:03} {}",
+    lines.push_back(akira::text::format("{:02}:{:02}:{:02}.{:03} {}",
         time_tm.tm_hour, time_tm.tm_min, time_tm.tm_sec, static_cast<int>(ms), line));
 
     while (lines.size() > MAX_LINES) {

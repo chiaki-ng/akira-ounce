@@ -12,6 +12,7 @@
 #include "play/controller_settings.hpp"
 #include "platform/pads/extended/pad_path.hpp"
 #include "platform/pads/extended/ps_output.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::platform::extended
 {
@@ -290,10 +291,10 @@ std::string ExtendedInputManager::describeActiveDevice()
         if (live) {
             liveness = (d.flags & AkiraInputDevice_Reporting) ? ", reporting" : ", asleep";
         }
-        return std::format("{:04x}:{:04x}{}", d.vendor_id, d.product_id, liveness);
+        return akira::text::format("{:04x}:{:04x}{}", d.vendor_id, d.product_id, liveness);
     }
 
-    return std::format("{} controller(s), none selected - automatic", devices.count);
+    return akira::text::format("{} controller(s), none selected - automatic", devices.count);
 }
 
 const char* ExtendedInputManager::describe(Availability availability)
@@ -1419,7 +1420,7 @@ void ExtendedInputManager::logRawReport(const char* when)
     std::string hex;
     hex.reserve(len * 3);
     for (size_t i = 0; i < len; i++) {
-        hex += std::format("{:02x}", raw.data[i]);
+        hex += akira::text::format("{:02x}", raw.data[i]);
         if (i + 1 < len) {
             hex += ' ';
         }

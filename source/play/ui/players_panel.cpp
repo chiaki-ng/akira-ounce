@@ -26,6 +26,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::play::ui {
 
 namespace components = ::arisa::components;
@@ -66,7 +68,7 @@ auto PlayersPanel::tone(SeatBoard::Tone shown) -> theme::ColourValue
 
 auto PlayersPanel::led(int player, bool open) -> composition::Element
 {
-    composition::Element number = components::Text(std::format("{}", player))
+    composition::Element number = components::Text(akira::text::format("{}", player))
                                       .font(theme::Font::system(15.0F, theme::Font::Weight::semibold))
                                       .frame({ .width = ledSize, .height = ledSize });
     if (open)
@@ -107,7 +109,7 @@ auto PlayersPanel::heading(const Couch::View& view) const -> composition::Elemen
 auto PlayersPanel::row(const SeatBoard::Row& shown) const -> composition::Element
 {
     Couch* held = couch;
-    const std::string slot = std::format("{}", shown.slot);
+    const std::string slot = akira::text::format("{}", shown.slot);
     std::vector<composition::Element> parts;
     parts.push_back(led(shown.player, shown.open).fixed_size());
     std::vector<composition::Element> label;
@@ -188,7 +190,7 @@ auto PlayersPanel::claiming(const Couch::View& view) const -> composition::Eleme
                            .padding(theme::Insets::symmetric(theme::Space{ 12.0F }, theme::Space{ 10.0F }))
                            .frame({ .max_width = composition::infinity })
                            .overlay(components::ShapeView(theme::Shape::rounded(12.0F)).stroke_border(theme::ColourRole::accent, 1.5F))
-                           .id(composition::ElementKey{ std::format("players.candidate.{}", static_cast<std::uint32_t>(candidate.pad)) }));
+                           .id(composition::ElementKey{ akira::text::format("players.candidate.{}", static_cast<std::uint32_t>(candidate.pad)) }));
     }
     return components::VStack(components::VStackOptions{ .spacing = theme::Space{ rowSpacing } }, std::move(rows));
 }
@@ -209,7 +211,7 @@ auto PlayersPanel::tile(const Couch::Profile& profile) const -> composition::Ele
             components::Text(profile.label).font(theme::Font::callout).line_limit(1))
             .frame({ .width = tileWidth, .height = tileHeight }))
         .button_style(components::ButtonStyle::glass(theme::Glass::clear()))
-        .id(composition::ElementKey{ std::format("players.profile.{}", profile.id) });
+        .id(composition::ElementKey{ akira::text::format("players.profile.{}", profile.id) });
 }
 
 auto PlayersPanel::profiles(const Couch::View& view) const -> composition::Element

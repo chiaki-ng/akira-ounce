@@ -9,6 +9,7 @@
 #include <uam.h>
 
 #include "play/stream_settings.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::platform::uam
 {
@@ -27,12 +28,12 @@ UamShaderSource::~UamShaderSource()
 
 std::optional<deko3d::ShaderSource::Code> UamShaderSource::load(deko3d::StaticShader shader)
 {
-    return compile(std::format("{}/{}.glsl", m_directory, stem(shader)), isVertex(shader), {});
+    return compile(akira::text::format("{}/{}.glsl", m_directory, stem(shader)), isVertex(shader), {});
 }
 
 std::optional<deko3d::ShaderSource::Code> UamShaderSource::load(const deko3d::VideoFragmentVariant& variant)
 {
-    return compile(std::format("{}/video_fsh.glsl", m_directory), false, fragmentDefines(variant));
+    return compile(akira::text::format("{}/video_fsh.glsl", m_directory), false, fragmentDefines(variant));
 }
 
 std::optional<deko3d::ShaderSource::Code> UamShaderSource::compile(const std::string& path, bool vertex,
@@ -84,7 +85,7 @@ std::string UamShaderSource::fragmentDefines(const deko3d::VideoFragmentVariant&
     if (variant.fsrPass)
         defines += "#define FSR_PASS\n";
     if (variant.dithering)
-        defines += std::format("#define DITHER_NOISE\n#define DITHER_STRENGTH {:.1f}\n",
+        defines += akira::text::format("#define DITHER_NOISE\n#define DITHER_STRENGTH {:.1f}\n",
             m_stream.ditheringStrength());
     return defines;
 }

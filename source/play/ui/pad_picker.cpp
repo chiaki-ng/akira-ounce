@@ -25,6 +25,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::play::ui {
 
 namespace components = ::arisa::components;
@@ -110,7 +112,7 @@ auto PadPicker::card(const CouchTable::Pad& pad, bool selected, float width) con
     if (selected)
         shown = std::move(shown).overlay(
             components::ShapeView(theme::Shape::rounded(18.0F)).stroke_border(theme::ColourRole::accent, 2.5F));
-    return std::move(shown).id(composition::ElementKey{ std::format("pad-picker.card.{}", static_cast<std::uint32_t>(pad.id)) });
+    return std::move(shown).id(composition::ElementKey{ akira::text::format("pad-picker.card.{}", static_cast<std::uint32_t>(pad.id)) });
 }
 
 auto PadPicker::body(composition::Context& context) const -> composition::Element

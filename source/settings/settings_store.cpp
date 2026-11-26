@@ -2,6 +2,7 @@
 #include "settings/migrations/registry.hpp"
 #include "util/base64.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <libchiaking/consoles_types.hpp>
 
@@ -340,7 +341,7 @@ void SettingsStore::finishLoading()
 void SettingsStore::backup(int64_t version) const
 {
     const std::string source = file.string();
-    const std::string backupPath = std::format("{}.v{}.bak", source, version);
+    const std::string backupPath = akira::text::format("{}.v{}.bak", source, version);
     std::ifstream input(source, std::ios::binary);
     std::ofstream output(backupPath, std::ios::binary | std::ios::trunc);
     if (input && output)
@@ -392,7 +393,7 @@ bool SettingsStore::persist(toml::table snapshot)
         section->write(snapshot);
 
     const std::string target = file.string();
-    const std::string tmpPath = std::format("{}.{}.tmp", target, writeSeq++);
+    const std::string tmpPath = akira::text::format("{}.{}.tmp", target, writeSeq++);
     {
         std::ofstream configFile(tmpPath, std::ios::out | std::ios::trunc);
         if (!configFile.is_open()) {

@@ -34,6 +34,7 @@
 #include "app/arisa/artwork.hpp"
 #include "trophies/title_listing.hpp"
 #include "trophies/ui/grade_counts.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::trophies::ui {
 
@@ -52,7 +53,7 @@ auto TrophyList::dated(const std::optional<libchiaking::trophies::Time>& at) -> 
 {
     if (!at)
         return {};
-    return std::format("{:%F}", std::chrono::floor<std::chrono::days>(*at));
+    return akira::text::format("{:%F}", std::chrono::floor<std::chrono::days>(*at));
 }
 
 auto TrophyList::body(composition::Context& context) const -> composition::Element
@@ -220,7 +221,7 @@ auto TrophyList::row(const TrophyModel::Row& shown, TrophyModel* model) -> compo
         GradeCounts(title.earned, GradeCounts::Size::Compact),
         components::VStack(components::VStackOptions{ .alignment = components::HorizontalAlignment::trailing,
                                .spacing = theme::Space{ 4.0F } },
-            components::Text(std::format("{}%", title.progress))
+            components::Text(akira::text::format("{}%", title.progress))
                 .font(theme::Font::system(14.0F, theme::Font::Weight::semibold)),
             composition::Element(controls::ProgressView(std::min<double>(title.progress, 100.0), 100.0))
                 .frame({ .width = barWidth }))

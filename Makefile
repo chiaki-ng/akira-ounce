@@ -71,6 +71,7 @@ ARISA_HOST_PREFIX   = $(ARISA_HOST_UNPACK)/$(ARISA_HOST_NAME)
 ARISA_HOST_CXX     ?= /opt/homebrew/bin/g++-16
 ARISA_TEST_DIR      = $(CURDIR)/build/tests/arisa
 ARISA_TEST_MODELS   = $(CURDIR)/source/log/log.cpp \
+                      $(CURDIR)/source/util/text_format.cpp \
                       $(CURDIR)/source/play/present_timing.cpp \
                       $(CURDIR)/source/play/present_loop.cpp \
                       $(CURDIR)/source/app/strings.cpp \
@@ -243,6 +244,7 @@ TEST_SRC     := $(wildcard $(CURDIR)/tests/*.cpp) \
                 $(CURDIR)/source/consoles/remote_lookup.cpp \
                 $(CURDIR)/source/consoles/debug_consoles.cpp \
                 $(CURDIR)/source/log/log.cpp \
+                $(CURDIR)/source/util/text_format.cpp \
                 $(CURDIR)/source/log/core_log.cpp \
                 $(CURDIR)/source/log/log_tail.cpp \
                 $(CURDIR)/source/log/log_folder.cpp \
@@ -569,7 +571,7 @@ arisa-library: platform docker-image
 	@test -f "$(ARISA_SOURCE)/CMakePresets.json" || { printf "$(RED)[x]$(NC) No arisa sources at $(ARISA_SOURCE): run git submodule update --init library/arisa\n"; exit 1; }
 	@printf "$(GREEN)[*]$(NC) Building arisa $$(git -C "$(ARISA_SOURCE)" rev-parse --short HEAD 2>/dev/null) for $(ARISA_FLAVOUR)...\n"
 	@$(DOCKER_RUN) -w "$(ARISA_SOURCE)" $(DOCKER_IMAGE) sh -c '\
-		cmake --preset package-$(ARISA_FLAVOUR) -B "$(ARISA_LIB_DIR)/build" \
+		cmake --preset package-$(ARISA_FLAVOUR) -B "$(ARISA_LIB_DIR)/build" -DARISA_HORIZON_GPU=$(ARISA_GPU) \
 			-DCMAKE_C_COMPILER_LAUNCHER= -DCMAKE_CXX_COMPILER_LAUNCHER= -DCMAKE_INSTALL_PREFIX="$(ARISA_PREFIX)" > /dev/null && \
 		nice -n 10 cmake --build "$(ARISA_LIB_DIR)/build" -j4 && \
 		cmake --install "$(ARISA_LIB_DIR)/build" > /dev/null'

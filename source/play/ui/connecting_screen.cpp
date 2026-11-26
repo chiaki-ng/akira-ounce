@@ -31,6 +31,7 @@
 #include "app/arisa/ambient_background.hpp"
 #include "app/arisa/artwork.hpp"
 #include "app/arisa/brand_lockup.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::play::ui {
 
@@ -91,7 +92,7 @@ auto ConnectingScreen::bar() const -> composition::Element
     std::vector<composition::Element> pills;
     for (int index = 0; index < steps; ++index)
         pills.push_back(pill(capsule(index, progress.step))
-                            .id(composition::ElementKey{ std::format("connecting.step.{}", index) }));
+                            .id(composition::ElementKey{ akira::text::format("connecting.step.{}", index) }));
     return components::HStack(components::HStackOptions{ .spacing = theme::Space{ capsuleSpacing } }, std::move(pills))
         .accessibility_hidden(true)
         .id(composition::ElementKey{ "connecting.progress" });
@@ -228,7 +229,7 @@ auto ConnectingScreen::chrome(int current, float scale) const -> composition::El
         headings.push_back(heading(arts[at], scale)
                                .opacity(static_cast<int>(at) == current ? 1.0F : 0.0F)
                                .animation(motion::Animation::ease_in_out(artFade), current)
-                               .id(composition::ElementKey{ std::format("connecting.heading.{}", at) }));
+                               .id(composition::ElementKey{ akira::text::format("connecting.heading.{}", at) }));
     std::vector<composition::Element> layers;
     layers.push_back(composition::Element(components::ZStack(
                          components::ZStackOptions{ .alignment = composition::Alignment::bottom_leading }, std::move(headings)))
@@ -266,7 +267,7 @@ auto ConnectingScreen::layered(composition::Context& context) const -> compositi
         backdrops.push_back(backdrop(arts[at])
                                 .opacity(opacity)
                                 .animation(motion::Animation::ease_in_out(artFade), current)
-                                .id(composition::ElementKey{ std::format("connecting.art.{}", index) }));
+                                .id(composition::ElementKey{ akira::text::format("connecting.art.{}", index) }));
     }
     std::vector<composition::Element> layers;
     layers.push_back(composition::Element(components::ZStack(components::ZStackOptions{}, std::move(backdrops)))

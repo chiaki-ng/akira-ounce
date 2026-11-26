@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::log {
 
 enum class Level : std::uint8_t {
@@ -144,7 +146,7 @@ void emit(Level level, std::format_string<Args...> format, Args&&... args)
 {
     Log& sink = Log::process();
     if (sink.enabled(level))
-        sink.write(level, std::format(format, std::forward<Args>(args)...));
+        sink.write(level, akira::text::format(format, std::forward<Args>(args)...));
 }
 
 template <typename... Args>

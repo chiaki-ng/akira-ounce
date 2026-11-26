@@ -4,6 +4,8 @@
 #include <cmath>
 #include <format>
 
+#include "util/text_format.hpp"
+
 namespace akira::play {
 
 void PresentTiming::Spread::add(double value)
@@ -87,7 +89,7 @@ auto PresentTiming::report(Clock::time_point now) -> std::optional<std::string>
         ? 0.0
         : std::ranges::fold_left(intervals, 0.0, std::plus<>{}) / static_cast<double>(intervals.size());
     const double longest = intervals.empty() ? 0.0 : std::ranges::max(intervals);
-    std::string line = std::format(
+    std::string line = akira::text::format(
         "[PRESENT] {} frames + {} repaints in {:.0f} ms, swap {}: interval avg {:.2f} p95 {:.2f} max {:.2f} ms; "
         "ready->submit avg {:.2f} max {:.2f} ms; submit->present avg {:.3f} max {:.3f} ms; "
         "skipped busy {} unavailable {}; copies {} ({} B)",

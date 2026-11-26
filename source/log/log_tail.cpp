@@ -4,6 +4,8 @@
 #include <ctime>
 #include <format>
 
+#include "util/text_format.hpp"
+
 namespace akira::log {
 
 LogTail::LogTail(std::size_t capacity, Stamp stamp)
@@ -54,7 +56,7 @@ std::string LogTail::clock()
                   now.time_since_epoch()).count() % 1000;
     std::time_t tt = std::chrono::system_clock::to_time_t(now);
     std::tm time_tm = *std::localtime(&tt);
-    return std::format("{:02}:{:02}:{:02}.{:03}", time_tm.tm_hour, time_tm.tm_min, time_tm.tm_sec,
+    return akira::text::format("{:02}:{:02}:{:02}.{:03}", time_tm.tm_hour, time_tm.tm_min, time_tm.tm_sec,
                        static_cast<int>(ms));
 }
 

@@ -1,5 +1,6 @@
 #include "trophies/icon_cache.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -70,7 +71,7 @@ std::filesystem::path IconCache::pathFor(const std::string& url) const
         hash *= 1099511628211ULL;
     }
 
-    return std::format("{}/{:016x}.img", directory.string(), hash);
+    return akira::text::format("{}/{:016x}.img", directory.string(), hash);
 }
 
 void IconCache::ensureDirectory()
@@ -128,7 +129,7 @@ void IconCache::save(const std::string& url, const Bytes& bytes)
     FILE* file = fopen(temp.c_str(), "wb");
     if (!file)
     {
-        stopDiskWrites(std::format("could not open {}: {}", temp, strerror(errno)));
+        stopDiskWrites(akira::text::format("could not open {}: {}", temp, strerror(errno)));
         return;
     }
 
@@ -138,7 +139,7 @@ void IconCache::save(const std::string& url, const Bytes& bytes)
     if (written != bytes.size())
     {
         remove(temp.c_str());
-        stopDiskWrites(std::format("short write to {} ({}/{} bytes)", temp, written, bytes.size()));
+        stopDiskWrites(akira::text::format("short write to {} ({}/{} bytes)", temp, written, bytes.size()));
         return;
     }
 
@@ -146,7 +147,7 @@ void IconCache::save(const std::string& url, const Bytes& bytes)
     if (rename(temp.c_str(), path.c_str()) != 0)
     {
         remove(temp.c_str());
-        stopDiskWrites(std::format("could not replace {}", path));
+        stopDiskWrites(akira::text::format("could not replace {}", path));
     }
 }
 

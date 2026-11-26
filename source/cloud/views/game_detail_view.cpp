@@ -8,6 +8,7 @@
 #include "app/views/qr_code_view.hpp"
 #include "app/views/theme.hpp"
 #include "play/views/connecting_view.hpp"
+#include "util/text_format.hpp"
 
 #include <borealis/core/i18n.hpp>
 
@@ -463,7 +464,7 @@ void GameDetailView::renderBand(const GameDetail& detail)
         auto* average = new brls::Label();
         average->setFontSize(44);
         average->setTextColor(pal.text);
-        average->setText(rating.averageText.empty() ? std::format("{:.2f}", rating.average) : rating.averageText);
+        average->setText(rating.averageText.empty() ? akira::text::format("{:.2f}", rating.average) : rating.averageText);
         summary->addView(average);
 
         const int filled = std::clamp(static_cast<int>(std::lround(rating.average)), 0, 5);
@@ -520,7 +521,7 @@ void GameDetailView::renderBand(const GameDetail& detail)
             row->addView(track);
 
             auto* label = new brls::Label();
-            label->setText(std::format("{}%", percent));
+            label->setText(akira::text::format("{}%", percent));
             label->setFontSize(13);
             label->setTextColor(pal.textDim);
             label->setMarginLeft(10);

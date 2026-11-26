@@ -6,6 +6,8 @@
 #include <ranges>
 #include <utility>
 
+#include "util/text_format.hpp"
+
 namespace akira::play {
 
 DiagnosticsReport::DiagnosticsReport(Sample sample, DiagnosticsHistory history)
@@ -61,21 +63,21 @@ auto DiagnosticsReport::headerChips() const -> std::vector<Chip>
     if (!sample.context.empty())
         chips.push_back(Chip{ .segments = { sample.context } });
     if (stats.takion_version)
-        chips.push_back(Chip{ .segments = { std::format("Takion v{}", *stats.takion_version) } });
+        chips.push_back(Chip{ .segments = { akira::text::format("Takion v{}", *stats.takion_version) } });
     std::string codec = stats.requested_hevc ? "HEVC" : "H.264";
     if (stats.video_width > 0)
         codec += " 8-bit";
     chips.push_back(Chip{ .segments = { codec } });
     if (stats.requested_height > 0)
         chips.push_back(Chip{ .segments = { stats.requested_fps > 0
-                                      ? std::format("{}p{}", stats.requested_height, stats.requested_fps)
-                                      : std::format("{}p", stats.requested_height) } });
+                                      ? akira::text::format("{}p{}", stats.requested_height, stats.requested_fps)
+                                      : akira::text::format("{}p", stats.requested_height) } });
     if (stats.console_quality_valid && stats.target_bitrate_kbps > 0)
     {
         const double offered = stats.target_bitrate_kbps / 1000.0;
         const double requested = stats.requested_bitrate / 1000.0;
         const bool shortfall = requested > 0.0 && offered < requested - 0.05;
-        chips.push_back(Chip{ .segments = { std::format("{} / {} Mbps", oneDecimal(offered), oneDecimal(requested)) },
+        chips.push_back(Chip{ .segments = { akira::text::format("{} / {} Mbps", oneDecimal(offered), oneDecimal(requested)) },
             .tone = shortfall ? Tone::Warning : Tone::Neutral });
     }
     if (const std::optional<std::string> scaling = upscaler())
@@ -90,13 +92,13 @@ auto DiagnosticsReport::upscaler() const -> std::optional<std::string>
     const UpscalingSummary& scaling = sample.upscaling;
     if (!scaling.active)
         return std::nullopt;
-    return std::format("FSR {}p\xe2\x86\x92{}p", scaling.inputHeight, scaling.targetHeight);
+    return akira::text::format("FSR {}p\xe2\x86\x92{}p", scaling.inputHeight, scaling.targetHeight);
 }
 
 auto DiagnosticsReport::uptime() const -> std::string
 {
     const std::uint64_t seconds = sample.stats.stream_duration_seconds;
-    return std::format("{:02}:{:02}", seconds / 60, seconds % 60);
+    return akira::text::format("{:02}:{:02}", seconds / 60, seconds % 60);
 }
 
 auto DiagnosticsReport::rttValue() const -> std::string
@@ -106,12 +108,12 @@ auto DiagnosticsReport::rttValue() const -> std::string
         return unavailable;
     if (stats.rtt_variation_ms < 1.0f)
         return milliseconds(stats.rtt_ms);
-    return std::format("{} \xc2\xb1 {} ms", millisecondsNumber(stats.rtt_ms), millisecondsNumber(stats.rtt_variation_ms));
+    return akira::text::format("{} \xc2\xb1 {} ms", millisecondsNumber(stats.rtt_ms), millisecondsNumber(stats.rtt_variation_ms));
 }
 
 auto DiagnosticsReport::lossValue() const -> std::string
 {
-    return std::format("{}%", oneDecimal(sample.stats.packet_loss_percent));
+    return akira::text::format("{}%", oneDecimal(sample.stats.packet_loss_percent));
 }
 
 auto DiagnosticsReport::lossTone() const -> Tone
@@ -221,7 +223,7 @@ auto DiagnosticsReport::displayStage() const -> Stage
         .unit = "akira/diagnostics/unit_hz",
         .tone = Tone::Neutral,
         .series = history.series(&DiagnosticsHistory::Frame::decodedFps),
-        .rows = { Row{ .label = "akira/diagnostics/rendered", .value = std::format("{} fps", oneDecimal(stats.fps)) },
+        .rows = { Row{ .label = "akira/diagnostics/rendered", .value = akira::text::format("{} fps", oneDecimal(stats.fps)) },
             Row{ .label = "akira/diagnostics/present", .value = milliseconds(stats.present_ms) },
             Row{ .label = "akira/diagnostics/jitter", .value = milliseconds(stats.jitter_ms) } } };
 }
@@ -238,15 +240,15 @@ auto DiagnosticsReport::networkSection() const -> Section
                                                                                       : stats.requested_bitrate / 1000.0;
     std::vector<Row> rows;
     rows.push_back(Row{ .label = "akira/diagnostics/bitrate",
-        .value = target > 0.0 ? std::format("{} / {} Mbps", bitrateValue(), oneDecimal(target))
-                              : std::format("{} Mbps", bitrateValue()) });
+        .value = target > 0.0 ? akira::text::format("{} / {} Mbps", bitrateValue(), oneDecimal(target))
+                              : akira::text::format("{} Mbps", bitrateValue()) });
     if (stats.transfer_valid)
         rows.push_back(Row{ .label = "akira/diagnostics/frame_transfer", .value = milliseconds(stats.transfer_ms) });
     rows.push_back(Row{ .label = "akira/diagnostics/packets_received", .value = std::to_string(stats.packets_received) });
     rows.push_back(Row{ .label = "akira/diagnostics/packets_lost", .value = std::to_string(stats.packets_lost) });
     if (stats.console_quality_valid)
         rows.push_back(Row{ .label = "akira/diagnostics/upstream_loss",
-            .value = std::format("{}%", oneDecimal(stats.upstream_loss)) });
+            .value = akira::text::format("{}%", oneDecimal(stats.upstream_loss)) });
     rows.push_back(Row{ .label = "akira/diagnostics/rejected", .value = std::to_string(stats.rejected_packets) });
     rows.push_back(Row{ .label = "akira/diagnostics/crypto_rejects", .value = std::to_string(stats.crypto_rejections) });
     rows.push_back(Row{ .label = "akira/diagnostics/reordered", .value = std::to_string(stats.reorder_skipped) });
@@ -283,8 +285,8 @@ auto DiagnosticsReport::presentationSection() const -> Section
     const StreamStats& stats = sample.stats;
     std::vector<Row> rows{ Row{ .label = "akira/diagnostics/source", .value = resolution(stats.video_width, stats.video_height) },
         Row{ .label = "akira/diagnostics/requested", .value = resolution(stats.requested_width, stats.requested_height) },
-        Row{ .label = "akira/diagnostics/source_fps", .value = std::format("{} fps", oneDecimal(stats.source_fps)) },
-        Row{ .label = "akira/diagnostics/rendered", .value = std::format("{} fps", oneDecimal(stats.fps)) },
+        Row{ .label = "akira/diagnostics/source_fps", .value = akira::text::format("{} fps", oneDecimal(stats.source_fps)) },
+        Row{ .label = "akira/diagnostics/rendered", .value = akira::text::format("{} fps", oneDecimal(stats.fps)) },
         Row{ .label = "akira/diagnostics/decode", .value = milliseconds(stats.decode_ms) },
         Row{ .label = "akira/diagnostics/present", .value = milliseconds(stats.present_ms) },
         Row{ .label = "akira/diagnostics/decoder", .value = sample.decoder.empty() ? std::string(unavailable) : sample.decoder } };
@@ -351,13 +353,13 @@ auto DiagnosticsReport::ratioTone(double value, double target) -> Tone
 
 auto DiagnosticsReport::oneDecimal(double value) -> std::string
 {
-    return std::format("{:.1f}", value);
+    return akira::text::format("{:.1f}", value);
 }
 
 auto DiagnosticsReport::millisecondsNumber(double value) -> std::string
 {
     if (std::round(value * 10.0) >= 100.0)
-        return std::format("{:.0f}", value);
+        return akira::text::format("{:.0f}", value);
     return oneDecimal(value);
 }
 
@@ -370,7 +372,7 @@ auto DiagnosticsReport::resolution(int width, int height) -> std::string
 {
     if (width <= 0 || height <= 0)
         return unavailable;
-    return std::format("{}\xc3\x97{}", width, height);
+    return akira::text::format("{}\xc3\x97{}", width, height);
 }
 
 }

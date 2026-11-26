@@ -6,6 +6,7 @@
 #include "app/views/qr_code_view.hpp"
 #include "app/views/theme.hpp"
 #include "consoles/views/pair_view.hpp"
+#include "util/text_format.hpp"
 
 #include <borealis/core/i18n.hpp>
 
@@ -211,7 +212,7 @@ void QrSignInView::draw(NVGcontext* vg, float x, float y, float width, float hei
         if (remaining != lastShownSecond) {
             lastShownSecond = remaining;
             timerLabel->setText(brls::getStr("akira/qr_sign_in/timer_fmt",
-                std::format("{}:{:02}", remaining / 60, remaining % 60)));
+                akira::text::format("{}:{:02}", remaining / 60, remaining % 60)));
         }
     }
 

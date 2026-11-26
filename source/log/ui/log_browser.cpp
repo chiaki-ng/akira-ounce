@@ -23,6 +23,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::log::ui {
 
 namespace components = ::arisa::components;
@@ -56,7 +58,7 @@ auto LogBrowser::status(const LogShelf::View& view) const -> std::string
     {
         if (!view.excerpt)
             return strings->text("akira/settings/log_read_error");
-        std::string shown = std::format("{}  ·  {} {}", LogFolder::sizeText(view.excerpt->totalBytes()), view.excerpt->lines(),
+        std::string shown = akira::text::format("{}  ·  {} {}", LogFolder::sizeText(view.excerpt->totalBytes()), view.excerpt->lines(),
             strings->text("akira/settings/log_lines"));
         if (view.excerpt->truncated())
             shown += "  ·  " + strings->text("akira/settings/log_tail_notice");
@@ -64,7 +66,7 @@ auto LogBrowser::status(const LogShelf::View& view) const -> std::string
     }
     if (!view.entries)
         return strings->text("akira/settings/log_folder_unavailable");
-    return std::format("{} {}", view.entries->size(), strings->text("akira/settings/log_items"));
+    return akira::text::format("{} {}", view.entries->size(), strings->text("akira/settings/log_items"));
 }
 
 auto LogBrowser::row(const LogFolder::Entry& entry) const -> composition::Element

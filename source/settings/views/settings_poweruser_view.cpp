@@ -5,6 +5,7 @@
 #include "trophies/trophy_manager.hpp"
 #include "platform/factory.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <borealis/core/i18n.hpp>
 #include <algorithm>
@@ -120,11 +121,11 @@ void SettingsPowerUserView::initPortGuessingCountSlider() {
             int count = static_cast<int>(1 + value * 74);
             count = std::max(1, std::min(75, count));
             services->networkSettings.setPortGuessingCount(count);
-            portGuessingCountSlider->detail->setText(std::format("{}", count));
+            portGuessingCountSlider->detail->setText(akira::text::format("{}", count));
             services->store.save();
         }
     );
-    portGuessingCountSlider->detail->setText(std::format("{}", current));
+    portGuessingCountSlider->detail->setText(akira::text::format("{}", current));
     portGuessingCountSlider->slider->setDiscreteStep(1.0f / 74.0f);
 }
 
@@ -144,11 +145,11 @@ void SettingsPowerUserView::initPortGuessingSocksSlider() {
             int count = static_cast<int>(1 + value * 249);
             count = std::max(1, std::min(250, count));
             services->networkSettings.setPortGuessingSocks(count);
-            portGuessingSocksSlider->detail->setText(std::format("{}", count));
+            portGuessingSocksSlider->detail->setText(akira::text::format("{}", count));
             services->store.save();
         }
     );
-    portGuessingSocksSlider->detail->setText(std::format("{}", current));
+    portGuessingSocksSlider->detail->setText(akira::text::format("{}", current));
     portGuessingSocksSlider->slider->setDiscreteStep(1.0f / 249.0f);
 }
 

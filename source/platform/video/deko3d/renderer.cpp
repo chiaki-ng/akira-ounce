@@ -7,6 +7,7 @@
 #include "network/wireguard_manager.hpp"
 #include "play/stream_settings.hpp"
 #include "play/stream_state.hpp"
+#include "util/text_format.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -1052,18 +1053,18 @@ void Deko3dRenderer::rebuildOverlayText()
 
     const auto& wg = m_wire_guard;
 
-    m_ov.fps = std::format("{:.1f}", m_render_fps);
-    m_ov.rate = std::format("{:.1f}", m_stats.measured_bitrate_mbps);
-    m_ov.loss = std::format("{:.1f}", m_stats.packet_loss_percent);
-    m_ov.rtt = m_stats.rtt_valid ? std::format("{:.0f}", m_stats.rtt_ms) : std::string("--");
-    m_ov.uptime = std::format("{}m{:02}s", mins, secs);
+    m_ov.fps = akira::text::format("{:.1f}", m_render_fps);
+    m_ov.rate = akira::text::format("{:.1f}", m_stats.measured_bitrate_mbps);
+    m_ov.loss = akira::text::format("{:.1f}", m_stats.packet_loss_percent);
+    m_ov.rtt = m_stats.rtt_valid ? akira::text::format("{:.0f}", m_stats.rtt_ms) : std::string("--");
+    m_ov.uptime = akira::text::format("{}m{:02}s", mins, secs);
 
-    m_ov.req_res = std::format("{}x{}", m_stats.requested_width, m_stats.requested_height);
-    m_ov.req_fps = std::format("{}", m_stats.requested_fps);
-    m_ov.req_rate = std::format("{:.1f}", m_stats.requested_bitrate / 1000.0f);
+    m_ov.req_res = akira::text::format("{}x{}", m_stats.requested_width, m_stats.requested_height);
+    m_ov.req_fps = akira::text::format("{}", m_stats.requested_fps);
+    m_ov.req_rate = akira::text::format("{:.1f}", m_stats.requested_bitrate / 1000.0f);
     m_ov.req_codec = m_stats.requested_hevc ? "HEVC" : "H.264";
 
-    m_ov.out_res = std::format("{}x{}", m_stats.video_width, m_stats.video_height);
+    m_ov.out_res = akira::text::format("{}x{}", m_stats.video_width, m_stats.video_height);
     m_ov.out_codec = m_stats.is_hevc ? "HEVC" : "H.264";
     m_ov.out_path = m_stats.is_hardware_decoder ? m_decoder_label : std::string("SW");
 
@@ -1075,18 +1076,18 @@ void Deko3dRenderer::rebuildOverlayText()
     {
         if (m_easu_enabled)
         {
-            m_ov.fsr_path = std::format("{}›{}›{}",
+            m_ov.fsr_path = akira::text::format("{}›{}›{}",
                 m_frame_height, m_fsr_target_height, m_display_height);
             const float scale = m_frame_height > 0
                 ? static_cast<float>(m_fsr_target_height) / static_cast<float>(m_frame_height)
                 : 1.0f;
             m_ov.fsr_detail = "EASU";
-            m_ov.fsr_compact = std::format("{:.2f}× {}", scale,
+            m_ov.fsr_compact = akira::text::format("{:.2f}× {}", scale,
                 m_fsr_supersampling ? "SS" : "EASU");
         }
         else
         {
-            m_ov.fsr_path = std::format("{}›{}", m_frame_height, m_display_height);
+            m_ov.fsr_path = akira::text::format("{}›{}", m_frame_height, m_display_height);
             m_ov.fsr_compact = "RCAS";
         }
 
@@ -1094,25 +1095,25 @@ void Deko3dRenderer::rebuildOverlayText()
         {
             const int strength = std::clamp(static_cast<int>(std::lround(
                 (1.0f - m_fsr_sharpness / 2.0f) * 100.0f)), 0, 100);
-            const std::string rcas = std::format("RCAS {}%", strength);
+            const std::string rcas = akira::text::format("RCAS {}%", strength);
             if (!m_ov.fsr_detail.empty())
                 m_ov.fsr_detail += " · ";
             m_ov.fsr_detail += rcas;
             if (m_easu_enabled)
-                m_ov.fsr_compact += std::format(" · {}", rcas);
+                m_ov.fsr_compact += akira::text::format(" · {}", rcas);
             else
                 m_ov.fsr_compact = rcas;
         }
     }
 
-    m_ov.lost = std::format("{}", m_stats.network_frames_lost);
-    m_ov.recovered = std::format("{}", m_stats.frames_recovered);
+    m_ov.lost = akira::text::format("{}", m_stats.network_frames_lost);
+    m_ov.recovered = akira::text::format("{}", m_stats.frames_recovered);
 
     m_ov.ghash = "PMULL";
     m_ov.vpn = wg.isConnected() ? wg.getTunnelIP() : "Off";
 
     m_ov.context = m_connection_context.empty()
-        ? std::format("{} \xc2\xb7 {}",
+        ? akira::text::format("{} \xc2\xb7 {}",
             m_stats.is_hevc ? "PS5" : "PS4",
             wg.isConnected() ? "VPN" : "Direct")
         : m_connection_context;
@@ -1122,12 +1123,12 @@ void Deko3dRenderer::rebuildOverlayText()
     m_ov.lat_visual_ms = m_stats.visual_ms;
     m_ov.lat_total_ms = m_stats.total_ms;
 
-    m_ov.lat_net = m_stats.latency_valid ? std::format("{:.0f}", m_stats.net_ms) : std::string("--");
-    m_ov.lat_visual = std::format("{:.1f}", m_stats.visual_ms);
-    m_ov.lat_total = m_stats.latency_valid ? std::format("{:.0f}", m_stats.total_ms) : std::string("--");
-    m_ov.lat_jitter = std::format("{:.1f}", m_stats.jitter_ms);
-    m_ov.lat_decode = std::format("{:.1f}", m_stats.decode_ms);
-    m_ov.src_fps = std::format("{:.1f}", m_stats.source_fps);
+    m_ov.lat_net = m_stats.latency_valid ? akira::text::format("{:.0f}", m_stats.net_ms) : std::string("--");
+    m_ov.lat_visual = akira::text::format("{:.1f}", m_stats.visual_ms);
+    m_ov.lat_total = m_stats.latency_valid ? akira::text::format("{:.0f}", m_stats.total_ms) : std::string("--");
+    m_ov.lat_jitter = akira::text::format("{:.1f}", m_stats.jitter_ms);
+    m_ov.lat_decode = akira::text::format("{:.1f}", m_stats.decode_ms);
+    m_ov.src_fps = akira::text::format("{:.1f}", m_stats.source_fps);
 }
 
 namespace

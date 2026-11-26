@@ -9,6 +9,7 @@
 #include "play/chiaki_core.hpp"
 #include "settings/views/settings_frame_view.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <borealis/core/i18n.hpp>
 #include <format>
@@ -154,7 +155,7 @@ void SettingsAccountView::initAuthSection() {
         ""
     );
 
-    std::string currentPort = std::format("{}", services->networkSettings.companionPort());
+    std::string currentPort = akira::text::format("{}", services->networkSettings.companionPort());
     companionPortInput->init(
         "akira/settings/companion_port"_i18n,
         currentPort,

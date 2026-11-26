@@ -2,6 +2,8 @@
 
 #include <format>
 
+#include "util/text_format.hpp"
+
 namespace akira::play {
 
 StreamSummary::StreamSummary(const StreamStats& stats)
@@ -20,14 +22,14 @@ StreamSummary::Health StreamSummary::health() const
 
 std::string StreamSummary::meta() const
 {
-    const std::string uptime = std::format("{}m{:02}s", stats.stream_duration_seconds / 60, stats.stream_duration_seconds % 60);
+    const std::string uptime = akira::text::format("{}m{:02}s", stats.stream_duration_seconds / 60, stats.stream_duration_seconds % 60);
     const int shownHeight = stats.video_height > 0 ? stats.video_height : stats.requested_height;
     if (shownHeight > 0 && stats.requested_fps > 0)
-        return std::format("{}p{} \xc2\xb7 {}", shownHeight, stats.requested_fps, uptime);
+        return akira::text::format("{}p{} \xc2\xb7 {}", shownHeight, stats.requested_fps, uptime);
     if (shownHeight > 0)
-        return std::format("{}p \xc2\xb7 {}", shownHeight, uptime);
+        return akira::text::format("{}p \xc2\xb7 {}", shownHeight, uptime);
     if (stats.requested_fps > 0)
-        return std::format("{} fps \xc2\xb7 {}", stats.requested_fps, uptime);
+        return akira::text::format("{} fps \xc2\xb7 {}", stats.requested_fps, uptime);
     return uptime;
 }
 

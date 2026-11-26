@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/text_format.hpp"
+
 namespace akira::log {
 
 void LogFiles::pruneOldLogs()
@@ -49,7 +51,7 @@ std::string LogFiles::appLogPath()
 
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
-    return std::format("{}/{:02}{:02}{:02}_{:02}{:02}{:02}.log",
+    return akira::text::format("{}/{:02}{:02}{:02}_{:02}{:02}{:02}.log",
              directory, t->tm_mday, t->tm_mon + 1, t->tm_year % 100,
              t->tm_hour, t->tm_min, t->tm_sec);
 }
@@ -62,7 +64,7 @@ std::string LogFiles::connectionLogPath(const std::string& connType)
 
     time_t now = time(nullptr);
     struct tm* t = localtime(&now);
-    return std::format("{}/{:02}{:02}{:02}_{:02}{:02}{:02}_{}.log",
+    return akira::text::format("{}/{:02}{:02}{:02}_{:02}{:02}{:02}_{}.log",
              directory, t->tm_mday, t->tm_mon + 1, t->tm_year % 100,
              t->tm_hour, t->tm_min, t->tm_sec, connType);
 }

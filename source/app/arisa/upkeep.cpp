@@ -22,6 +22,7 @@
 #include "trophies/trophy_manager.hpp"
 #include "util/http.hpp"
 #include "util/http_pool.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::app::arisa {
 
@@ -157,7 +158,7 @@ void Upkeep::runTlsProbe(HttpSession& session, const std::function<void(std::str
         log::info("tlsprobe: {} {} -> {} ({})", expected ? "PASS" : "FAIL", probe.what, connected ? "connected" : "rejected",
             response.error.empty() ? "no transport error" : response.error);
         ++done;
-        show(std::format("{}/{} checked, {} unexpected - {} {}", done, std::size(cases), failures,
+        show(akira::text::format("{}/{} checked, {} unexpected - {} {}", done, std::size(cases), failures,
             expected ? "ok:" : "UNEXPECTED:", probe.what));
     }
     if (failures == 0)
@@ -167,7 +168,7 @@ void Upkeep::runTlsProbe(HttpSession& session, const std::function<void(std::str
         return;
     }
     log::error("tlsprobe: ===== {} case(s) UNEXPECTED: do not rely on the service here =====", failures);
-    show(std::format("FAIL - {} of 5 unexpected, see log", failures));
+    show(akira::text::format("FAIL - {} of 5 unexpected, see log", failures));
 }
 
 void Upkeep::probeTls(std::function<void(std::string)> report)

@@ -1,5 +1,6 @@
 #include "platform/video/viddec/hardware_decoder.hpp"
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -250,14 +251,14 @@ std::optional<HardwareDecoder::Frame> HardwareDecoder::nextFrame(std::chrono::na
     if (const Result rc = videoDecoderGetFrame(&m_decoder, &frame, static_cast<u64>(timeout.count())); R_FAILED(rc))
     {
         if (!timedOut(rc) && m_reporter)
-            m_reporter(std::format("videoDecoderGetFrame 0x{:x}, {}", rc, queueState()));
+            m_reporter(akira::text::format("videoDecoderGetFrame 0x{:x}, {}", rc, queueState()));
         return std::nullopt;
     }
     if (frame.slot < ImageCount)
     {
         std::int64_t& previous = m_slot_timestamps[frame.slot];
         if (frame.timestamp_ns <= previous && m_reporter)
-            m_reporter(std::format("slot {} came back with timestamp {} after {}, {} held in slot, {}", frame.slot, frame.timestamp_ns,
+            m_reporter(akira::text::format("slot {} came back with timestamp {} after {}, {} held in slot, {}", frame.slot, frame.timestamp_ns,
                 previous, m_live[frame.slot].load(std::memory_order_relaxed), queueState()));
         previous = std::max(previous, frame.timestamp_ns);
     }
@@ -270,7 +271,7 @@ std::string HardwareDecoder::queueState() const
     std::string queued;
     for (std::uint32_t i = 0; i < std::min<std::uint32_t>(session.queue_count, ImageCount); ++i)
         std::format_to(std::back_inserter(queued), "{}{}", i ? "," : "", session.queue[(session.queue_head + i) % ImageCount]);
-    return std::format("queue {} [{}] pending {} slot {}", session.queue_count, queued, m_decoder.pending, m_decoder.pending_slot);
+    return akira::text::format("queue {} [{}] pending {} slot {}", session.queue_count, queued, m_decoder.pending, m_decoder.pending_slot);
 }
 
 std::expected<void, Result> HardwareDecoder::flush()
@@ -314,7 +315,7 @@ void HardwareDecoder::releaseReturnedFrames()
     }
     std::ranges::for_each(returned, [this](VideoFrame& frame) { videoDecoderReleaseFrame(&m_decoder, &frame); });
     if (m_decoder.decoder.queue_count > ImageCount && m_reporter)
-        m_reporter(std::format("released {} frames and the queue overflowed, {}", returned.size(), queueState()));
+        m_reporter(akira::text::format("released {} frames and the queue overflowed, {}", returned.size(), queueState()));
 }
 
 }

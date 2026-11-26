@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "log/log.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::network {
 
@@ -92,7 +93,7 @@ bool WireGuardManager::parseConfigFile(const std::string& path, WgConfig& cfg) {
             auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), parsed);
             if (error != std::errc{} || end != value.data() + value.size() ||
                 parsed < WG_MIN_MTU || parsed > WG_MAX_MTU) {
-                lastError = std::format("Invalid MTU: expected {}-{}", WG_MIN_MTU, WG_MAX_MTU);
+                lastError = akira::text::format("Invalid MTU: expected {}-{}", WG_MIN_MTU, WG_MAX_MTU);
                 log::error("WG: {}", lastError);
                 return false;
             }
@@ -266,13 +267,13 @@ bool WireGuardManager::connect() {
         log::info("WG: wg_init succeeded, calling wg_connect");
         int err = wg_connect(handshaking);
         if (err != WG_OK) {
-            failure = std::format("Handshake failed: {}", err);
+            failure = akira::text::format("Handshake failed: {}", err);
             log::error("WG: wg_connect failed: {}", err);
         } else {
             log::info("WG: wg_connect succeeded, calling wg_start");
             err = wg_start(handshaking);
             if (err != WG_OK) {
-                failure = std::format("Failed to start tunnel: {}", err);
+                failure = akira::text::format("Failed to start tunnel: {}", err);
                 log::error("WG: wg_start failed: {}", err);
             } else {
                 std::array<uint8_t, 4> tunnelBytes{};

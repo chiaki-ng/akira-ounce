@@ -3,6 +3,8 @@
 #include <format>
 #include <utility>
 
+#include "util/text_format.hpp"
+
 namespace akira::play {
 
 StreamRoute::StreamRoute(std::optional<std::string> cloudName, bool remote, bool vpn, bool ps5)
@@ -28,12 +30,12 @@ std::string StreamRoute::context() const
 {
     const char* platformLabel = ps5 ? "PS5" : "PS4";
     if (cloudName)
-        return std::format("Cloud \xc2\xb7 {}", *cloudName);
+        return akira::text::format("Cloud \xc2\xb7 {}", *cloudName);
     if (remote)
-        return std::format("{} \xc2\xb7 Remote", platformLabel);
+        return akira::text::format("{} \xc2\xb7 Remote", platformLabel);
     if (vpn)
-        return std::format("{} \xc2\xb7 VPN", platformLabel);
-    return std::format("{} \xc2\xb7 Direct", platformLabel);
+        return akira::text::format("{} \xc2\xb7 VPN", platformLabel);
+    return akira::text::format("{} \xc2\xb7 Direct", platformLabel);
 }
 
 }

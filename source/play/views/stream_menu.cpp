@@ -6,6 +6,7 @@
 #include "play/stream_summary.hpp"
 #include "app/views/glass.hpp"
 #include "app/views/theme.hpp"
+#include "util/text_format.hpp"
 
 #include <borealis/core/i18n.hpp>
 #include <borealis/core/touch/tap_gesture.hpp>
@@ -597,7 +598,7 @@ void StreamMenu::drawBadge(NVGcontext* vg, float cx, float cy, int count, float 
     nvgFillColor(vg, fade(p.danger, e));
     nvgFill(vg);
 
-    std::string text = count > 99 ? "99" : std::format("{}", count);
+    std::string text = count > 99 ? "99" : akira::text::format("{}", count);
     nvgFontFaceId(vg, theme.font_ui);
     nvgFontSize(vg, 11.5f * s);
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);

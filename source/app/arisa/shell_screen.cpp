@@ -53,6 +53,7 @@
 #endif
 #include "play/ui/connecting_screen.hpp"
 #include "settings/ui/settings_screen.hpp"
+#include "util/text_format.hpp"
 
 namespace akira::app::arisa {
 
@@ -73,7 +74,7 @@ ShellScreen::ShellScreen(ShellModel& model, Notices& notices, const Parts& parts
 
 auto ShellScreen::versionText() -> std::string
 {
-    return std::format("akira {}", app::version::string());
+    return akira::text::format("akira {}", app::version::string());
 }
 
 auto ShellScreen::body(composition::Context& context) const -> composition::Element
