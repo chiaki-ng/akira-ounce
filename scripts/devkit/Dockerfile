@@ -6,7 +6,8 @@ ARG RUST_VERSION=1.91.0
 ARG MESON_VERSION=1.9.1
 ARG UAM2_COMMIT=b794767cd0e4854199271dfd959798b8714edd23
 
-RUN apt-get update && \
+RUN rm -f /etc/apt/sources.list.d/devkitpro.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends bison flex g++ pkg-config git curl ca-certificates python3-venv \
         libdrm-dev libexpat1-dev zlib1g-dev libzstd-dev spirv-tools libclang-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -32,7 +33,8 @@ ENV DEVKITPRO=/opt/devkitpro
 ENV DEVKITA64=/opt/devkitpro/devkitA64
 ENV PATH=/opt/devkitpro/devkitA64/bin:/opt/devkitpro/portlibs/switch2/bin:/opt/devkitpro/tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-RUN apt-get update && \
+RUN rm -f /etc/apt/sources.list.d/devkitpro.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends glslang-tools && \
     rm -rf /var/lib/apt/lists/*
 
