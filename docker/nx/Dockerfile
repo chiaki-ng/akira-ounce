@@ -4,7 +4,8 @@ FROM ${BASE}
 ARG NX_DEPS_RELEASE=nx-deps-241026
 ARG NX_DEPS_SHA256=f8887c1ea570f1a90fc8db3c986ca785770fa06a71401321788732cb3e167000
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN rm -f /etc/apt/sources.list.d/devkitpro.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
     bison flex python3-mako python3-pip \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --break-system-packages 'meson>=1.3.0'
